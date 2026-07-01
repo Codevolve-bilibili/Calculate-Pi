@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="494.0" height="160" viewBox="0 0 494.0 160" role="img" aria-label="calculate_pi --terms 100 --stats" >
+  <rect width="494.0" height="160" rx="8" ry="8" fill="#1e1e1e" />
+  <rect width="494.0" height="28" rx="8" ry="8" fill="#2d2d2d" />
+  <text x="247.0" y="19.0" fill="#cccccc" font-family="sans-serif" font-size="12" text-anchor="middle">calculate_pi --terms 100 --stats</text>
+  <text x="16" y="44" fill="#4ec9b0" font-family="Consolas, Monaco, 'Courier New', monospace" font-size="14" xml:space="preserve">$ ./build/calculate_pi --terms 100 --stats</text>
+  <text x="16" y="64" fill="#d4d4d4" font-family="Consolas, Monaco, 'Courier New', monospace" font-size="14" xml:space="preserve">3.14159265358979323846264338327950288419716939937510...</text>
+  <text x="16" y="84" fill="#d4d4d4" font-family="Consolas, Monaco, 'Courier New', monospace" font-size="14" xml:space="preserve">Terms: 100</text>
+  <text x="16" y="104" fill="#d4d4d4" font-family="Consolas, Monaco, 'Courier New', monospace" font-size="14" xml:space="preserve">Digits: 1417</text>
+  <text x="16" y="124" fill="#d4d4d4" font-family="Consolas, Monaco, 'Courier New', monospace" font-size="14" xml:space="preserve">Time: 0 ms</text>
+</svg>
