@@ -2,7 +2,7 @@
 
 # Calculate Pi · 计算圆周率 π
 
-[![CI](https://github.com/Codevolve-bilibili/Calculate%20Pi/actions/workflows/ci.yml/badge.svg)](https://github.com/Codevolve-bilibili/Calculate%20Pi/actions/workflows/ci.yml)
+[![CI](https://github.com/Codevolve-bilibili/Calculate-Pi/actions/workflows/ci.yml/badge.svg)](https://github.com/Codevolve-bilibili/Calculate-Pi/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![C++20](https://img.shields.io/badge/C%2B%2B-20-blue.svg)](https://en.cppreference.com/w/cpp/20)
 [![CMake](https://img.shields.io/badge/CMake-3.16+-064F8C.svg)](https://cmake.org/)
