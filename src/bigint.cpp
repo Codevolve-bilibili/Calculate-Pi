@@ -388,7 +388,6 @@ static std::pair<BigInt, BigInt> divide_magnitude(const BigInt& dividend, const 
         if (shift == 0) return v;
         std::vector<uint32_t> r(v.size() + 1, 0);
         uint32_t carry = 0;
-        uint32_t inv_shift = 32 - shift;
         for (size_t i = 0; i < v.size(); ++i) {
             uint64_t w = (static_cast<uint64_t>(v[i]) << shift) | carry;
             r[i] = static_cast<uint32_t>(w & BASE_MASK);

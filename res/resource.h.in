@@ -1,0 +1,38 @@
+// Copyright (c) 2026 Calculate Pi project
+// SPDX-License-Identifier: MIT
+
+#ifndef CALCULATE_PI_RESOURCE_H
+#define CALCULATE_PI_RESOURCE_H
+
+// -----------------------------------------------------------------------------
+// Resource identifiers
+// -----------------------------------------------------------------------------
+
+// Application icon
+#define IDI_APP_ICON            101
+
+// String table identifiers
+#define IDS_APP_TITLE           1
+#define IDS_APP_DESCRIPTION     2
+#define IDS_APP_COPYRIGHT       3
+
+// -----------------------------------------------------------------------------
+// Version numbers - populated by CMake via configure_file()
+// -----------------------------------------------------------------------------
+
+#define VERSION_MAJOR           @RC_VERSION_MAJOR@
+#define VERSION_MINOR           @RC_VERSION_MINOR@
+#define VERSION_PATCH           @RC_VERSION_PATCH@
+#define VERSION_TWEAK           @RC_VERSION_TWEAK@
+
+// Helper macros to turn the numeric version into a string literal
+#define RC_STRINGIFY_IMPL(x)    #x
+#define RC_STRINGIFY(x)         RC_STRINGIFY_IMPL(x)
+
+#define FILE_VERSION_STRING     RC_STRINGIFY(VERSION_MAJOR) "." \
+                                RC_STRINGIFY(VERSION_MINOR) "." \
+                                RC_STRINGIFY(VERSION_PATCH) "." \
+                                RC_STRINGIFY(VERSION_TWEAK)
+#define PRODUCT_VERSION_STRING  FILE_VERSION_STRING
+
+#endif // CALCULATE_PI_RESOURCE_H

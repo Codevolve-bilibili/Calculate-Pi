@@ -69,15 +69,13 @@ private:
 
 class FFTMultiplier : public MultiplicationStrategy {
 public:
-    explicit FFTMultiplier(size_t threshold = 1024) : threshold_(threshold) {}
+    FFTMultiplier() = default;
 
     std::vector<uint32_t> multiply(
         const std::vector<uint32_t>& a,
         const std::vector<uint32_t>& b) const override;
 
 private:
-    size_t threshold_;
-
     static std::vector<uint32_t> fft_multiply(
         const std::vector<uint32_t>& a,
         const std::vector<uint32_t>& b);

@@ -1,0 +1,74 @@
+// Copyright (c) 2026 Calculate Pi project
+// SPDX-License-Identifier: MIT
+
+// This .rc file is encoded in UTF-8. Tell the resource compiler to interpret
+// string literals as UTF-8 so that Chinese characters are preserved.
+#pragma code_page(65001)
+
+// Generated resource header (from res/resource.h.in via CMake configure_file)
+#include "resource.h"
+
+#include <windows.h>
+
+// -----------------------------------------------------------------------------
+// Default language for resources: Chinese (Simplified, PRC)
+// -----------------------------------------------------------------------------
+LANGUAGE LANG_CHINESE, SUBLANG_CHINESE_SIMPLIFIED
+
+// -----------------------------------------------------------------------------
+// Icon
+// -----------------------------------------------------------------------------
+IDI_APP_ICON ICON "calculate_pi.ico"
+
+// -----------------------------------------------------------------------------
+// String table
+// -----------------------------------------------------------------------------
+STRINGTABLE
+BEGIN
+    IDS_APP_TITLE           "Calculate Pi"
+    IDS_APP_DESCRIPTION     "基于 Chudnovsky 二进制分裂算法的高精度圆周率计算工具"
+    IDS_APP_COPYRIGHT       "Copyright © Codevolve 保留所有权利"
+END
+
+// -----------------------------------------------------------------------------
+// Version information
+// -----------------------------------------------------------------------------
+VS_VERSION_INFO VERSIONINFO
+FILEVERSION     VERSION_MAJOR, VERSION_MINOR, VERSION_PATCH, VERSION_TWEAK
+PRODUCTVERSION  VERSION_MAJOR, VERSION_MINOR, VERSION_PATCH, VERSION_TWEAK
+FILEFLAGSMASK   VS_FFI_FILEFLAGSMASK
+#ifdef _DEBUG
+FILEFLAGS       VS_FF_DEBUG
+#else
+FILEFLAGS       0x0L
+#endif
+FILEOS          VOS_NT_WINDOWS32
+FILETYPE        VFT_APP
+FILESUBTYPE     0x0L
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        // 080404B0 = Chinese (Simplified, PRC), Unicode (1200)
+        BLOCK "080404B0"
+        BEGIN
+            VALUE "CompanyName",        "Codevolve"
+            VALUE "FileDescription",    "High-precision Pi calculator"
+            VALUE "FileVersion",        FILE_VERSION_STRING
+            VALUE "InternalName",       "calculate_pi"
+            VALUE "LegalCopyright",     "Copyright © Codevolve 保留所有权利"
+            VALUE "OriginalFilename",   "calculate_pi.exe"
+            VALUE "ProductName",        "Calculate Pi"
+            VALUE "ProductVersion",     PRODUCT_VERSION_STRING
+        END
+    END
+
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x804, 1200
+    END
+END
+
+// -----------------------------------------------------------------------------
+// Application manifest
+// -----------------------------------------------------------------------------
+CREATEPROCESS_MANIFEST_RESOURCE_ID RT_MANIFEST "Calculate-Pi.manifest"

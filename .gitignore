@@ -3,6 +3,13 @@ build/
 cmake-build-*/
 out/
 
+# Python files
+assets/*.py
+res/*.py
+
+# Running Cache
+assets/*.txt
+
 # CMake generated files
 CMakeCache.txt
 CMakeFiles/

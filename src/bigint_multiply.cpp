@@ -272,7 +272,7 @@ AdaptiveMultiplier::AdaptiveMultiplier(size_t karatsuba_threshold,
                                        size_t fft_threshold)
     : naive_(std::make_unique<NaiveMultiplier>()),
       karatsuba_(std::make_unique<KaratsubaMultiplier>(karatsuba_threshold)),
-      fft_(std::make_unique<FFTMultiplier>(fft_threshold)),
+      fft_(std::make_unique<FFTMultiplier>()),
       karatsuba_threshold_(karatsuba_threshold),
       fft_threshold_(fft_threshold) {}
 
