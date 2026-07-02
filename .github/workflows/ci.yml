@@ -29,20 +29,27 @@ jobs:
       - name: Build
         run: cmake --build build --config ${{ matrix.build_type }}
 
-      - name: Test help output
+      - name: Locate executable
+        id: exe
         shell: bash
         run: |
+          # .gitignore 只影响本地 git 跟踪，不会阻止 CI 在运行时创建 build/。
+          # 这里在运行时定位实际生成的可执行文件路径，避免 Windows 多配置
+          # 生成器把 .exe 放到 build/Release/ 而导致路径 hard-code 失败。
           if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
-            ./build/calculate_pi.exe --help
+            if [ -f build/calculate_pi.exe ]; then
+              echo "path=build/calculate_pi.exe" >> "$GITHUB_OUTPUT"
+            else
+              echo "path=build/Release/calculate_pi.exe" >> "$GITHUB_OUTPUT"
+            fi
           else
-            ./build/calculate_pi --help
+            echo "path=build/calculate_pi" >> "$GITHUB_OUTPUT"
           fi
+
+      - name: Test help output
+        shell: bash
+        run: ./${{ steps.exe.outputs.path }} --help
 
       - name: Test compute output
         shell: bash
-        run: |
-          if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
-            ./build/calculate_pi.exe --terms 10 --stats
-          else
-            ./build/calculate_pi --terms 10 --stats
-          fi
+        run: ./${{ steps.exe.outputs.path }} --terms 10 --stats
