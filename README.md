@@ -125,6 +125,10 @@ cmake --build build --config Release
 ./build/calculate_pi --terms 1000 --output pi.txt --stats
 ```
 
+> **Windows 用户**：请将上面的 `./build/calculate_pi` 替换为 `./build/calculate_pi.exe`。
+>
+> **Windows users**: replace `./build/calculate_pi` above with `./build/calculate_pi.exe`.
+
 ### 交互模式 / Interactive mode
 
 不传递任何参数即可进入交互模式：

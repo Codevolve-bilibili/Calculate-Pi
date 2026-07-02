@@ -5,6 +5,10 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+# Keep the executable in the build root on all platforms and generators
+# (e.g. avoids build/Release/calculate_pi.exe on Windows multi-config generators).
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
+
 # -----------------------------------------------------------------------------
 # Windows resource file version numbers
 # -----------------------------------------------------------------------------
