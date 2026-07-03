@@ -42,6 +42,10 @@ target_sources(calculate_pi PRIVATE
 )
 
 if(WIN32)
+    # Prevent <windows.h> from defining min/max macros that conflict with
+    # std::min / std::max in C++ code.
+    target_compile_definitions(calculate_pi PRIVATE NOMINMAX)
+
     target_sources(calculate_pi PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/res/Calculate-Pi.rc
     )
