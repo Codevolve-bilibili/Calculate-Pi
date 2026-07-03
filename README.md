@@ -155,10 +155,11 @@ Run without arguments to enter interactive mode. The program will ask for:
 
 ```text
 Calculate Pi
+├── .github/workflows/
+│   └── ci.yml              # GitHub Actions 持续集成 / CI workflow
 ├── CMakeLists.txt          # CMake 构建配置 / Build configuration
 ├── LICENSE                 # MIT 许可证 / MIT license
 ├── README.md               # 本文件 / This file
-├── main.cpp                # 程序入口 / Program entry point
 ├── include/cpi/            # 头文件 / Header files
 │   ├── app.hpp             # 应用主逻辑 / Application logic
 │   ├── bigint.hpp          # 大整数 / Big integer
@@ -168,16 +169,20 @@ Calculate Pi
 │   ├── concurrency.hpp     # 线程池 / Thread pool
 │   ├── expected.hpp        # 轻量期望类型 / Lightweight expected type
 │   └── io.hpp              # 输入输出 / I/O utilities
-├── src/                    # 源文件 / Source files
-│   ├── app.cpp
-│   ├── bigint.cpp
-│   ├── bigint_multiply.cpp
-│   ├── chudnovsky.cpp
-│   ├── cli.cpp
-│   ├── concurrency.cpp
-│   └── io.cpp
-└── .github/workflows/
-    └── ci.yml              # GitHub Actions 持续集成 / CI workflow
+├── main.cpp                # 程序入口 / Program entry point
+├── res/                    # Windows 资源文件 / Windows resource files
+│   ├── Calculate-Pi.manifest
+│   ├── Calculate-Pi.rc
+│   ├── calculate_pi.ico
+│   └── resource.h.in
+└── src/                    # 源文件 / Source files
+    ├── app.cpp
+    ├── bigint.cpp
+    ├── bigint_multiply.cpp
+    ├── chudnovsky.cpp
+    ├── cli.cpp
+    ├── concurrency.cpp
+    └── io.cpp
 ```
 
 ---
