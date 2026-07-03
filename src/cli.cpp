@@ -52,6 +52,48 @@ expected<std::filesystem::path, CliError> parse_output_path(
     }
 }
 
+expected<uint64_t, CliError> parse_memory_mb(std::string_view s) {
+    if (!is_decimal_uint64(s)) {
+        return CliError::InvalidMemoryLimit;
+    }
+    if (s.size() > 1 && s[0] == '0') {
+        return CliError::InvalidMemoryLimit;
+    }
+    try {
+        size_t pos = 0;
+        unsigned long long value = std::stoull(std::string(s), &pos);
+        if (pos != s.size() || value > std::numeric_limits<uint64_t>::max()) {
+            return CliError::InvalidMemoryLimit;
+        }
+        if (value == 0) {
+            return CliError::InvalidMemoryLimit;
+        }
+        return static_cast<uint64_t>(value);
+    } catch (const std::exception&) {
+        return CliError::InvalidMemoryLimit;
+    }
+}
+
+expected<size_t, CliError> parse_thread_count(std::string_view s) {
+    if (!is_decimal_uint64(s)) {
+        return CliError::InvalidThreadCount;
+    }
+    if (s.size() > 1 && s[0] == '0') {
+        return CliError::InvalidThreadCount;
+    }
+    try {
+        size_t pos = 0;
+        unsigned long long value = std::stoull(std::string(s), &pos);
+        if (pos != s.size() || value > std::numeric_limits<size_t>::max()) {
+            return CliError::InvalidThreadCount;
+        }
+        // 0 is allowed and means "use hardware concurrency".
+        return static_cast<size_t>(value);
+    } catch (const std::exception&) {
+        return CliError::InvalidThreadCount;
+    }
+}
+
 } // namespace
 
 expected<CliResult, CliError> parse_cli(int argc, const char* argv[]) {
@@ -97,11 +139,54 @@ expected<CliResult, CliError> parse_cli(int argc, const char* argv[]) {
             continue;
         }
 
+        if (arg == "--quiet" || arg == "-q") {
+            opts.quiet = true;
+            continue;
+        }
+
+        if (arg == "--force" || arg == "-f") {
+            opts.force = true;
+            continue;
+        }
+
+        if (arg == "--eco" || arg == "-e") {
+            opts.eco_mode = true;
+            continue;
+        }
+
+        if (arg == "--threads" || arg == "-t") {
+            if (i + 1 >= argc) {
+                return CliError::MissingArgumentValue;
+            }
+            auto count = parse_thread_count(argv[++i]);
+            if (!count) return count.error();
+            opts.thread_count = *count;
+            continue;
+        }
+
+        if (arg == "--max-memory-mb" || arg == "-m") {
+            if (i + 1 >= argc) {
+                return CliError::MissingArgumentValue;
+            }
+            auto mb = parse_memory_mb(argv[++i]);
+            if (!mb) return mb.error();
+            if (opts.max_memory_mb.has_value()) {
+                return CliError::ConflictingOptions;
+            }
+            opts.max_memory_mb = *mb;
+            continue;
+        }
+
+        if (arg == "--last-digit") {
+            opts.last_digit_easter_egg = true;
+            continue;
+        }
+
         return CliError::UnknownArgument;
     }
 
-    // --terms is required for compute mode.
-    if (opts.terms == 0) {
+    // --terms is required for compute mode unless --last-digit is used.
+    if (opts.terms == 0 && !opts.last_digit_easter_egg) {
         return CliError::MissingArgumentValue;
     }
 
@@ -122,6 +207,10 @@ std::string to_string(CliError error) {
             return "Invalid output file path";
         case CliError::ConflictingOptions:
             return "Conflicting command-line options";
+        case CliError::InvalidThreadCount:
+            return "Invalid thread count: must be a decimal integer (0 = hardware concurrency)";
+        case CliError::InvalidMemoryLimit:
+            return "Invalid memory limit: must be a positive decimal integer in MB";
     }
     return "Unknown CLI error";
 }
@@ -134,10 +223,16 @@ void print_help(std::ostream& os) {
        << "  CalculatePi --terms <N> [-o <path>] [--stats]\n"
        << "\n"
        << "Options:\n"
-       << "  -n, --terms <N>   Number of Chudnovsky series terms (required in CLI mode)\n"
+       << "  -n, --terms <N>      Number of Chudnovsky series terms (required in CLI mode)\n"
        << "  -o, --output <path>  Write the result to the specified file\n"
-       << "      --stats       Print additional statistics\n"
-       << "  -h, --help        Show this help message\n"
+       << "      --stats          Print additional statistics\n"
+       << "  -q, --quiet          Do not print the full pi string to the console\n"
+       << "  -t, --threads <N>    Number of worker threads (0 = hardware concurrency)\n"
+       << "  -e, --eco            Use fewer threads to reduce CPU load\n"
+       << "  -m, --max-memory-mb  Maximum memory the computation may use in MB\n"
+       << "  -f, --force          Skip the memory safety guard\n"
+       << "      --last-digit     Explain that pi has no last digit\n"
+       << "  -h, --help           Show this help message\n"
        << "\n"
        << "If no arguments are given, the program enters interactive mode.\n";
 }

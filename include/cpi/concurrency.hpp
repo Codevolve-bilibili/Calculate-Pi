@@ -93,4 +93,13 @@ auto ThreadPool::enqueue(F&& f, Args&&... args)
     }
 }
 
+// Lower the priority of the current process (and/or its threads) to reduce
+// impact on the rest of the system.  The implementation is selected at compile
+// time via platform macros:
+//   - Windows: SetPriorityClass / SetThreadPriority
+//   - Linux:   nice(10)
+//   - macOS:   nice(10)
+//   - others:  no-op
+void set_eco_priority();
+
 } // namespace cpi

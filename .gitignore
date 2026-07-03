@@ -7,6 +7,9 @@ out/
 assets/*.py
 res/*.py
 
+# Error Issues
+error*.md
+
 # Running Cache
 assets/*.txt
 

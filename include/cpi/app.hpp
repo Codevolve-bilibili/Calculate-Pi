@@ -15,6 +15,7 @@ enum class AppError {
     CliError,
     ComputeError,
     IOError,
+    MemoryGuard,
     UnknownError,
 };
 

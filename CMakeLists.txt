@@ -38,6 +38,7 @@ target_sources(calculate_pi PRIVATE
     src/cli.cpp
     src/concurrency.cpp
     src/io.cpp
+    src/sysinfo.cpp
 )
 
 if(WIN32)

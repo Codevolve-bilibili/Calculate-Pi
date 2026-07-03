@@ -31,10 +31,16 @@ Usage:
   CalculatePi --terms <N> [-o <path>] [--stats]
 
 Options:
-  -n, --terms <N>   Number of Chudnovsky series terms (required in CLI mode)
+  -n, --terms <N>      Number of Chudnovsky series terms (required in CLI mode)
   -o, --output <path>  Write the result to the specified file
-      --stats       Print additional statistics
-  -h, --help        Show this help message
+      --stats          Print additional statistics
+  -q, --quiet          Do not print the full pi string to the console
+  -t, --threads <N>    Number of worker threads (0 = hardware concurrency)
+  -e, --eco            Use fewer threads to reduce CPU load
+  -m, --max-memory-mb  Maximum memory the computation may use in MB
+  -f, --force          Skip the memory safety guard
+      --last-digit     Explain that pi has no last digit
+  -h, --help           Show this help message
 
 If no arguments are given, the program enters interactive mode.
 ```
@@ -74,6 +80,9 @@ Time: 4 ms
 | 基于 `std::thread` 的线程池实现并行递归分裂 | Thread pool based on `std::thread` for parallel recursive splitting |
 | 支持命令行参数与交互式两种运行模式 | Supports both command-line arguments and interactive modes |
 | 支持将计算结果保存到文件 | Supports saving results to a file |
+| 内存安全 guard：估算所需内存并阻止危险大任务 | Memory safety guard: estimates required memory and blocks dangerous large tasks |
+| 可调节线程数与节能模式 | Configurable thread count and eco mode |
+| 安静输出与大结果提示 | Quiet output and large-result warnings |
 | 跨平台：Windows、Linux、macOS | Cross-platform: Windows, Linux, macOS |
 
 ---
@@ -123,6 +132,21 @@ cmake --build build --config Release
 
 # 将结果保存到文件 / Save result to file
 ./build/calculate_pi --terms 1000 --output pi.txt --stats
+
+# 使用单线程 / Use single thread
+./build/calculate_pi --terms 1000 --threads 1 --stats
+
+# 降低 CPU 占用 / Reduce CPU load
+./build/calculate_pi --terms 1000 --eco --stats
+
+# 安静模式（只输出统计） / Quiet mode (statistics only)
+./build/calculate_pi --terms 1000 --quiet --stats
+
+# 指定内存上限 / Set memory limit
+./build/calculate_pi --terms 100000 --max-memory-mb 512 --stats
+
+# π 的最后一位彩蛋 / Pi last digit easter egg
+./build/calculate_pi --last-digit
 ```
 
 > **Windows 用户**：请将上面的 `./build/calculate_pi` 替换为 `./build/calculate_pi.exe`。
@@ -168,7 +192,8 @@ Calculate Pi
 │   ├── cli.hpp             # 命令行解析 / CLI parsing
 │   ├── concurrency.hpp     # 线程池 / Thread pool
 │   ├── expected.hpp        # 轻量期望类型 / Lightweight expected type
-│   └── io.hpp              # 输入输出 / I/O utilities
+│   ├── io.hpp              # 输入输出 / I/O utilities
+│   └── sysinfo.hpp         # 系统信息 / System information
 ├── main.cpp                # 程序入口 / Program entry point
 ├── res/                    # Windows 资源文件 / Windows resource files
 │   ├── Calculate-Pi.manifest
@@ -182,7 +207,8 @@ Calculate Pi
     ├── chudnovsky.cpp
     ├── cli.cpp
     ├── concurrency.cpp
-    └── io.cpp
+    ├── io.cpp
+    └── sysinfo.cpp
 ```
 
 ---

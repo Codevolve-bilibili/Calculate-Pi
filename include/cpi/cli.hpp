@@ -23,6 +23,12 @@ struct ComputeOptions {
     uint64_t terms;
     std::optional<std::filesystem::path> output_path;
     bool show_stats = false;
+    bool quiet = false;
+    bool force = false;
+    bool eco_mode = false;
+    bool last_digit_easter_egg = false;
+    size_t thread_count = 0;
+    std::optional<uint64_t> max_memory_mb;
 };
 
 struct CliResult {
@@ -37,6 +43,8 @@ enum class CliError {
     TermsOutOfRange,
     InvalidOutputPath,
     ConflictingOptions,
+    InvalidThreadCount,
+    InvalidMemoryLimit,
 };
 
 expected<CliResult, CliError> parse_cli(int argc, const char* argv[]);

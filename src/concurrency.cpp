@@ -7,6 +7,12 @@
 #include <memory>
 #include <utility>
 
+#ifdef _WIN32
+#include <windows.h>
+#elif defined(__unix__) || defined(__APPLE__)
+#include <unistd.h>
+#endif
+
 namespace cpi {
 
 ThreadPool::ThreadPool(size_t num_threads) {
@@ -83,6 +89,21 @@ void ThreadPool::shutdown() {
         std::lock_guard<std::mutex> lock(mutex_);
         workers_.clear();
     }
+}
+
+void set_eco_priority() {
+#ifdef _WIN32
+    SetPriorityClass(GetCurrentProcess(), BELOW_NORMAL_PRIORITY_CLASS);
+    SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_BELOW_NORMAL);
+#elif defined(__unix__) || defined(__APPLE__)
+    // Increase nice value by 10 to lower CPU scheduling priority.
+    // nice() returns the new nice value on success, or -1 on error.
+    // Some valid nice values are negative, so we ignore the return code here
+    // and simply attempt the adjustment.
+    (void)::nice(10);
+#else
+    // No-op on unsupported platforms.
+#endif
 }
 
 } // namespace cpi
