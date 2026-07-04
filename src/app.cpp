@@ -19,7 +19,23 @@ namespace cpi {
 
 namespace {
 
-std::string app_error_message(AppError error) {
+std::string app_error_message(AppError error, Language lang) {
+    if (lang == Language::Chinese) {
+        switch (error) {
+            case AppError::CliError:
+                return "命令行错误";
+            case AppError::ComputeError:
+                return "计算错误";
+            case AppError::IOError:
+                return "I/O 错误";
+            case AppError::MemoryGuard:
+                return "超出内存限制";
+            case AppError::UnknownError:
+                return "未知错误";
+        }
+        return "未知应用错误";
+    }
+
     switch (error) {
         case AppError::CliError:
             return "Command-line error";
@@ -58,36 +74,78 @@ std::string format_memory_mib(uint64_t bytes) {
 
 } // namespace
 
+namespace {
+
+std::optional<Language> detect_language_from_argv(int argc, const char* argv[]) {
+    for (int i = 1; i < argc; ++i) {
+        std::string_view arg(argv[i]);
+        if ((arg == "--lang" || arg == "-l") && i + 1 < argc) {
+            return parse_language(argv[++i]);
+        }
+    }
+    return std::nullopt;
+}
+
+} // namespace
+
 Application::Application() = default;
 
 int Application::run(int argc, const char* argv[]) {
     auto cli_result = parse_cli(argc, argv);
     if (!cli_result) {
-        print_error(to_string(cli_result.error()), std::cerr);
+        Language err_lang = detect_language_from_argv(argc, argv)
+                                .value_or(Language::Chinese);
+        print_error(to_string(cli_result.error(), err_lang), std::cerr);
         return 1;
     }
 
-    switch (cli_result->mode) {
-        case RunMode::Help:
-            print_help(std::cout);
-            return 0;
-        case RunMode::Interactive:
-        case RunMode::Compute: {
-            auto options = gather_options(*cli_result);
-            if (!options) {
-                print_error(app_error_message(options.error()), std::cerr);
-                return 1;
-            }
-            return run_compute(*options);
-        }
+    // Help mode uses the default language (Chinese) directly without asking.
+    if (cli_result->mode == RunMode::Help) {
+        Language lang = cli_result->language.value_or(Language::Chinese);
+        print_help(std::cout, lang);
+        return 0;
     }
 
-    print_error("Unexpected run mode", std::cerr);
+    // Resolve language first: prompt if it was not specified on the CLI.
+    Language lang = resolve_language(*cli_result, std::cin);
+
+    if (cli_result->mode == RunMode::Interactive ||
+        cli_result->mode == RunMode::Compute) {
+        auto options = gather_options(*cli_result, lang);
+        if (!options) {
+            print_error(app_error_message(options.error(), lang), std::cerr);
+            return 1;
+        }
+        return run_compute(*options, lang);
+    }
+
+    print_error(app_error_message(AppError::UnknownError, lang), std::cerr);
     return 1;
 }
 
-void Application::print_help(std::ostream& os) {
-    cpi::print_help(os);
+Language Application::resolve_language(const CliResult& cli,
+                                       std::istream& is) {
+    if (cli.language.has_value()) {
+        return *cli.language;
+    }
+
+    while (true) {
+        std::cout << "请选择语言 / Choose language (zh/中文/en/english): ";
+        std::string line;
+        if (!std::getline(is, line)) {
+            // If input is unavailable, fall back to the default language.
+            return Language::Chinese;
+        }
+        auto lang = parse_language(line);
+        if (lang) {
+            return *lang;
+        }
+        std::cout << "无效输入，请重新选择。/ Invalid input, please try again.\n";
+    }
+}
+
+void Application::print_help(std::ostream& os, Language lang) {
+    cpi::print_help(os, lang);
 }
 
 void Application::print_error(std::string_view message, std::ostream& os) {
@@ -95,7 +153,7 @@ void Application::print_error(std::string_view message, std::ostream& os) {
 }
 
 expected<ComputeOptions, AppError> Application::gather_options(
-    const CliResult& cli) {
+    const CliResult& cli, Language lang) {
     if (cli.mode == RunMode::Compute) {
         if (!cli.compute_options.has_value()) {
             return AppError::CliError;
@@ -105,9 +163,9 @@ expected<ComputeOptions, AppError> Application::gather_options(
 
     if (cli.mode == RunMode::Interactive) {
         auto opts = read_interactive_options(
-            cli.compute_options.value_or(ComputeOptions{}));
+            cli.compute_options.value_or(ComputeOptions{}), lang);
         if (!opts) {
-            print_error(to_string(opts.error()), std::cerr);
+            print_error(to_string(opts.error(), lang), std::cerr);
             return AppError::IOError;
         }
         return *opts;
@@ -116,11 +174,16 @@ expected<ComputeOptions, AppError> Application::gather_options(
     return AppError::CliError;
 }
 
-int Application::run_compute(const ComputeOptions& options) {
+int Application::run_compute(const ComputeOptions& options, Language lang) {
     // Easter egg: pi has no last digit.
     if (options.last_digit_easter_egg) {
-        std::cout << "π is irrational — it has no last digit.\n"
-                  << "Use --terms <N> to compute the first N digits, or --help for more options.\n";
+        if (lang == Language::Chinese) {
+            std::cout << "π 是无理数——它没有最后一位。\n"
+                      << "使用 --terms <N> 计算前 N 位，或使用 --help 查看更多选项。\n";
+        } else {
+            std::cout << "π is irrational — it has no last digit.\n"
+                      << "Use --terms <N> to compute the first N digits, or --help for more options.\n";
+        }
         return 0;
     }
 
@@ -154,10 +217,17 @@ int Application::run_compute(const ComputeOptions& options) {
 
         if (estimated_bytes > allowed_bytes) {
             std::ostringstream oss;
-            oss << "Requested terms would require approximately "
-               << format_memory_mib(estimated_bytes)
-               << " of memory.\n"
-               << "Use --terms <N>, --max-memory-mb <M>, or --force to proceed anyway.\n";
+            if (lang == Language::Chinese) {
+                oss << "请求的项数大约需要 "
+                    << format_memory_mib(estimated_bytes)
+                    << " 内存。\n"
+                    << "请使用 --terms <N>、--max-memory-mb <M> 或 --force 继续。\n";
+            } else {
+                oss << "Requested terms would require approximately "
+                    << format_memory_mib(estimated_bytes)
+                    << " of memory.\n"
+                    << "Use --terms <N>, --max-memory-mb <M>, or --force to proceed anyway.\n";
+            }
             print_error(oss.str(), std::cerr);
             return static_cast<int>(AppError::MemoryGuard);
         }
@@ -201,20 +271,29 @@ int Application::run_compute(const ComputeOptions& options) {
     constexpr uint64_t kLargeOutputThreshold = 1'000'000;
     if (!options.quiet && !options.output_path.has_value() &&
         output_digits > kLargeOutputThreshold) {
-        std::cerr << "Warning: Large result; use --output <file> to save instead of printing to console.\n";
+        if (lang == Language::Chinese) {
+            std::cerr << "警告：结果较大；请使用 --output <文件> 保存到文件，而不是打印到控制台。\n";
+        } else {
+            std::cerr << "Warning: Large result; use --output <file> to save instead of printing to console.\n";
+        }
     }
 
     if (!options.quiet) {
-        print_to_console(console_output, options.show_stats);
+        print_to_console(console_output, options.show_stats, lang);
     } else if (options.show_stats) {
-        std::cout << "Computed " << output_digits << " digits in "
-                  << result->elapsed_ms << " ms.\n";
+        if (lang == Language::Chinese) {
+            std::cout << "已计算 " << output_digits << " 位，耗时 "
+                      << result->elapsed_ms << " 毫秒。\n";
+        } else {
+            std::cout << "Computed " << output_digits << " digits in "
+                      << result->elapsed_ms << " ms.\n";
+        }
     }
 
     if (options.output_path.has_value()) {
         auto write_res = write_text_file(*options.output_path, formatted, true);
         if (!write_res) {
-            print_error(to_string(write_res.error()), std::cerr);
+            print_error(to_string(write_res.error(), lang), std::cerr);
             return 1;
         }
     }

@@ -35,7 +35,8 @@ enum class IOError {
                                     uint64_t output_digits,
                                     uint64_t guard_digits);
 
-[[nodiscard]] std::string format_stats(const ConsoleOutput& output);
+[[nodiscard]] std::string format_stats(const ConsoleOutput& output,
+                                       Language lang = Language::Chinese);
 
 [[nodiscard]] expected<void, IOError> write_text_file(
     const std::filesystem::path& path,
@@ -43,13 +44,15 @@ enum class IOError {
     bool overwrite = true);
 
 [[nodiscard]] expected<ComputeOptions, IOError> read_interactive_options(
-    std::istream& is = std::cin);
+    Language lang, std::istream& is = std::cin);
 [[nodiscard]] expected<ComputeOptions, IOError> read_interactive_options(
-    const ComputeOptions& defaults, std::istream& is = std::cin);
+    const ComputeOptions& defaults, Language lang, std::istream& is = std::cin);
 
 void print_to_console(const ConsoleOutput& output, bool show_stats,
+                      Language lang = Language::Chinese,
                       std::ostream& os = std::cout);
 
-[[nodiscard]] std::string to_string(IOError error);
+[[nodiscard]] std::string to_string(IOError error,
+                                    Language lang = Language::Chinese);
 
 } // namespace cpi

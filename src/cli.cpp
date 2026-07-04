@@ -20,6 +20,19 @@ bool is_decimal_uint64(std::string_view s) {
     return true;
 }
 
+std::string to_lower_ascii(std::string_view s) {
+    std::string result;
+    result.reserve(s.size());
+    for (char c : s) {
+        if (c >= 'A' && c <= 'Z') {
+            result.push_back(static_cast<char>(c + ('a' - 'A')));
+        } else {
+            result.push_back(c);
+        }
+    }
+    return result;
+}
+
 } // namespace
 
 expected<uint64_t, CliError> parse_terms(std::string_view s) {
@@ -96,24 +109,54 @@ expected<size_t, CliError> parse_thread_count(std::string_view s) {
     }
 }
 
+std::optional<Language> parse_language(std::string_view s) {
+    const std::string lowered = to_lower_ascii(s);
+    if (lowered == "en" || lowered == "english" || lowered == "英文" ||
+        lowered == "eng") {
+        return Language::English;
+    }
+    if (lowered == "zh" || lowered == "chinese" || lowered == "中文" ||
+        lowered == "zh-cn" || lowered == "cn" || lowered == "简体") {
+        return Language::Chinese;
+    }
+    return std::nullopt;
+}
+
 expected<CliResult, CliError> parse_cli(int argc, const char* argv[]) {
     if (argc == 1) {
-        return CliResult{RunMode::Interactive, ComputeOptions{}};
+        return CliResult{RunMode::Interactive, std::nullopt, ComputeOptions{}};
     }
 
-    CliResult result{RunMode::Compute, ComputeOptions{}};
+    CliResult result{RunMode::Compute, std::nullopt, ComputeOptions{}};
     ComputeOptions& opts = *result.compute_options;
     bool interactive_requested = false;
+    bool help_requested = false;
 
     for (int i = 1; i < argc; ++i) {
         std::string_view arg(argv[i]);
 
         if (arg == "--help" || arg == "-h") {
-            return CliResult{RunMode::Help, std::nullopt};
+            help_requested = true;
+            continue;
         }
 
         if (arg == "--interactive" || arg == "-i") {
             interactive_requested = true;
+            continue;
+        }
+
+        if (arg == "--lang" || arg == "-l") {
+            if (i + 1 >= argc) {
+                return CliError::MissingArgumentValue;
+            }
+            auto lang = parse_language(argv[++i]);
+            if (!lang) {
+                return CliError::InvalidLanguage;
+            }
+            if (result.language.has_value()) {
+                return CliError::ConflictingOptions;
+            }
+            result.language = *lang;
             continue;
         }
 
@@ -195,6 +238,12 @@ expected<CliResult, CliError> parse_cli(int argc, const char* argv[]) {
         result.mode = RunMode::Interactive;
     }
 
+    if (help_requested) {
+        result.mode = RunMode::Help;
+        result.compute_options = std::nullopt;
+        return result;
+    }
+
     // --terms is required for compute mode unless --last-digit is used.
     if (result.mode == RunMode::Compute && opts.terms == 0 &&
         !opts.last_digit_easter_egg) {
@@ -204,7 +253,31 @@ expected<CliResult, CliError> parse_cli(int argc, const char* argv[]) {
     return result;
 }
 
-std::string to_string(CliError error) {
+std::string to_string(CliError error, Language lang) {
+    if (lang == Language::Chinese) {
+        switch (error) {
+            case CliError::UnknownArgument:
+                return "未知的命令行参数";
+            case CliError::MissingArgumentValue:
+                return "命令行选项缺少值";
+            case CliError::InvalidTermsFormat:
+                return "项数格式无效：必须是正十进制整数";
+            case CliError::TermsOutOfRange:
+                return "项数越界：必须是正整数";
+            case CliError::InvalidOutputPath:
+                return "输出文件路径无效";
+            case CliError::ConflictingOptions:
+                return "命令行选项冲突";
+            case CliError::InvalidThreadCount:
+                return "线程数无效：必须是十进制整数（0 = 硬件并发数）";
+            case CliError::InvalidMemoryLimit:
+                return "内存限制无效：必须是正十进制整数（单位 MB）";
+            case CliError::InvalidLanguage:
+                return "语言无效：支持 en/english/英文 或 zh/chinese/中文";
+        }
+        return "未知 CLI 错误";
+    }
+
     switch (error) {
         case CliError::UnknownArgument:
             return "Unknown command-line argument";
@@ -222,11 +295,39 @@ std::string to_string(CliError error) {
             return "Invalid thread count: must be a decimal integer (0 = hardware concurrency)";
         case CliError::InvalidMemoryLimit:
             return "Invalid memory limit: must be a positive decimal integer in MB";
+        case CliError::InvalidLanguage:
+            return "Invalid language: use en/english/英文 or zh/chinese/中文";
     }
     return "Unknown CLI error";
 }
 
-void print_help(std::ostream& os) {
+void print_help(std::ostream& os, Language lang) {
+    if (lang == Language::Chinese) {
+        os << "Calculate Pi - 楚德诺夫斯基二进制分裂算法\n"
+           << "\n"
+           << "用法:\n"
+           << "  CalculatePi [选项]\n"
+           << "  CalculatePi --terms <N> [-o <路径>] [--stats]\n"
+           << "  CalculatePi --interactive [选项]\n"
+           << "\n"
+           << "选项:\n"
+           << "  -n, --terms <N>      楚德诺夫斯基级数项数（命令行模式下必需）\n"
+           << "  -o, --output <路径>  将结果写入指定文件\n"
+           << "      --stats          显示额外统计信息\n"
+           << "  -q, --quiet          不在控制台打印完整 π 字符串\n"
+           << "  -t, --threads <N>    工作线程数（0 = 硬件并发数）\n"
+           << "  -e, --eco            使用更少线程以降低 CPU 负载\n"
+           << "  -m, --max-memory-mb  计算允许使用的最大内存（MB）\n"
+           << "  -f, --force          跳过内存安全检查\n"
+           << "      --last-digit     说明 π 没有最后一位\n"
+           << "  -l, --lang <语言>    界面语言：en/english/英文 或 zh/chinese/中文\n"
+           << "  -i, --interactive    进入交互模式（将其他标志作为默认值）\n"
+           << "  -h, --help           显示此帮助信息\n"
+           << "\n"
+           << "若未提供任何参数，程序将进入交互模式。\n";
+        return;
+    }
+
     os << "Calculate Pi - Chudnovsky binary splitting\n"
        << "\n"
        << "Usage:\n"
@@ -244,6 +345,7 @@ void print_help(std::ostream& os) {
        << "  -m, --max-memory-mb  Maximum memory the computation may use in MB\n"
        << "  -f, --force          Skip the memory safety guard\n"
        << "      --last-digit     Explain that pi has no last digit\n"
+       << "  -l, --lang <lang>    UI language: en/english/英文 or zh/chinese/中文\n"
        << "  -i, --interactive    Enter interactive mode (use other flags as defaults)\n"
        << "  -h, --help           Show this help message\n"
        << "\n"

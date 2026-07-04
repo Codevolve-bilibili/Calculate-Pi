@@ -21,7 +21,38 @@
 
 ### 帮助信息 / Help
 
-![Help screenshot](assets/screenshot_help.svg)
+#### 中文帮助 / Chinese help
+
+![Help screenshot (Chinese)](assets/screenshot_help.svg)
+
+```text
+Calculate Pi - 楚德诺夫斯基二进制分裂算法
+
+用法:
+  CalculatePi [选项]
+  CalculatePi --terms <N> [-o <路径>] [--stats]
+  CalculatePi --interactive [选项]
+
+选项:
+  -n, --terms <N>      楚德诺夫斯基级数项数（命令行模式下必需）
+  -o, --output <路径>  将结果写入指定文件
+      --stats          显示额外统计信息
+  -q, --quiet          不在控制台打印完整 π 字符串
+  -t, --threads <N>    工作线程数（0 = 硬件并发数）
+  -e, --eco            使用更少线程以降低 CPU 负载
+  -m, --max-memory-mb  计算允许使用的最大内存（MB）
+  -f, --force          跳过内存安全检查
+      --last-digit     说明 π 没有最后一位
+  -l, --lang <语言>    界面语言：en/english/英文 或 zh/chinese/中文
+  -i, --interactive    进入交互模式（将其他标志作为默认值）
+  -h, --help           显示此帮助信息
+
+若未提供任何参数，程序将进入交互模式。
+```
+
+#### English help
+
+![Help screenshot (English)](assets/screenshot_help_en.svg)
 
 ```text
 Calculate Pi - Chudnovsky binary splitting
@@ -41,6 +72,7 @@ Options:
   -m, --max-memory-mb  Maximum memory the computation may use in MB
   -f, --force          Skip the memory safety guard
       --last-digit     Explain that pi has no last digit
+  -l, --lang <lang>    UI language: en/english/英文 or zh/chinese/中文
   -i, --interactive    Enter interactive mode (use other flags as defaults)
   -h, --help           Show this help message
 
@@ -85,6 +117,7 @@ Time: 4 ms
 | 内存安全 guard：估算所需内存并阻止危险大任务 | Memory safety guard: estimates required memory and blocks dangerous large tasks |
 | 可调节线程数与节能模式 | Configurable thread count and eco mode |
 | 安静输出与大结果提示 | Quiet output and large-result warnings |
+| 中英文双语界面 | Bilingual Chinese/English UI |
 | 跨平台：Windows、Linux、macOS | Cross-platform: Windows, Linux, macOS |
 
 ---
@@ -123,8 +156,12 @@ cmake --build build --config Release
 ### 命令行模式 / Command-line mode
 
 ```bash
-# 显示帮助 / Show help
+# 显示帮助 / Show help（默认中文 / Chinese by default）
 ./build/calculate_pi --help
+
+# 显示英文帮助 / Show English help
+./build/calculate_pi --help --lang en
+./build/calculate_pi --help --lang 英文
 
 # 计算 N 项并输出到控制台 / Compute N terms and print to console
 ./build/calculate_pi --terms 100
@@ -147,6 +184,9 @@ cmake --build build --config Release
 # 指定内存上限 / Set memory limit
 ./build/calculate_pi --terms 100000 --max-memory-mb 512 --stats
 
+# 指定界面语言为英文 / Set UI language to English
+./build/calculate_pi --terms 100 --stats --lang en
+
 # π 的最后一位彩蛋 / Pi last digit easter egg
 ./build/calculate_pi --last-digit
 ```
@@ -166,15 +206,16 @@ cmake --build build --config Release
 
 程序会依次询问（若已通过命令行指定则跳过）：
 
-1. 项数 `N`（正整数）
-2. 是否保存到文件
-3. 输出文件路径（如果回答“是”）
-4. 是否显示统计信息
-5. 是否开启安静模式（不打印 π 字符串）
-6. 工作线程数（`0` 表示使用硬件并发数）
-7. 是否开启节能模式（使用更少线程）
-8. 最大内存限制（单位 MB，留空表示无限制）
-9. 是否跳过内存安全 guard
+1. **语言**（`zh`/`中文` 或 `en`/`英文`）
+2. 项数 `N`（正整数）
+3. 是否保存到文件
+4. 输出文件路径（如果回答“是”）
+5. 是否显示统计信息
+6. 是否开启安静模式（不打印 π 字符串）
+7. 工作线程数（`0` 表示使用硬件并发数）
+8. 是否开启节能模式（使用更少线程）
+9. 最大内存限制（单位 MB，留空表示无限制）
+10. 是否跳过内存安全 guard
 
 Run without arguments, or use `-i` / `--interactive`, to enter interactive mode:
 
@@ -189,15 +230,16 @@ Run without arguments, or use `-i` / `--interactive`, to enter interactive mode:
 
 The program will ask for the following (skipping any value already provided on the command line):
 
-1. Number of terms `N` (positive integer)
-2. Whether to save to a file
-3. Output file path (if answered “yes”)
-4. Whether to show statistics
-5. Whether to enable quiet mode (do not print the pi string)
-6. Number of worker threads (`0` means hardware concurrency)
-7. Whether to enable eco mode (use fewer threads)
-8. Maximum memory limit in MB (leave empty for no limit)
-9. Whether to skip the memory safety guard
+1. **Language** (`zh`/`中文` or `en`/`english`)
+2. Number of terms `N` (positive integer)
+3. Whether to save to a file
+4. Output file path (if answered “yes”)
+5. Whether to show statistics
+6. Whether to enable quiet mode (do not print the pi string)
+7. Number of worker threads (`0` means hardware concurrency)
+8. Whether to enable eco mode (use fewer threads)
+9. Maximum memory limit in MB (leave empty for no limit)
+10. Whether to skip the memory safety guard
 
 ---
 

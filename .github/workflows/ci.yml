@@ -50,6 +50,10 @@ jobs:
         shell: bash
         run: ./${{ steps.exe.outputs.path }} --help
 
-      - name: Test compute output
+      - name: Test compute output (English)
         shell: bash
-        run: ./${{ steps.exe.outputs.path }} --terms 10 --stats
+        run: ./${{ steps.exe.outputs.path }} --terms 10 --stats --lang en
+
+      - name: Test compute output (Chinese)
+        shell: bash
+        run: ./${{ steps.exe.outputs.path }} --terms 10 --stats --lang zh

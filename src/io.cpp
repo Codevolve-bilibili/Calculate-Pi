@@ -49,16 +49,26 @@ std::string trim_string(const std::string& s) {
     return s.substr(start, end - start);
 }
 
+bool answer_is_yes(const std::string& answer, Language lang) {
+    if (answer.empty()) return false;
+    if (lang == Language::Chinese) {
+        return answer == "y" || answer == "Y" ||
+               answer == "yes" || answer == "YES" ||
+               answer == "是" || answer == "1";
+    }
+    return answer == "y" || answer == "Y" ||
+           answer == "yes" || answer == "YES";
+}
+
 expected<bool, IOError> read_yes_no(const std::string& prompt,
-                                      std::istream& is) {
+                                      Language lang, std::istream& is) {
     std::cout << prompt;
     std::string line;
     if (!std::getline(is, line)) {
         return IOError::InteractiveInputFailed;
     }
     const std::string answer = trim_string(line);
-    return !answer.empty() &&
-           (answer[0] == 'y' || answer[0] == 'Y');
+    return answer_is_yes(answer, lang);
 }
 
 } // namespace
@@ -87,11 +97,17 @@ std::string format_pi(const BigInt& scaled_pi, uint64_t output_digits,
     return s;
 }
 
-std::string format_stats(const ConsoleOutput& output) {
+std::string format_stats(const ConsoleOutput& output, Language lang) {
     std::ostringstream oss;
-    oss << "Terms: " << output.terms << "\n"
-        << "Digits: " << output.decimal_digits << "\n"
-        << "Time: " << output.elapsed_ms << " ms\n";
+    if (lang == Language::Chinese) {
+        oss << "项数: " << output.terms << "\n"
+            << "位数: " << output.decimal_digits << "\n"
+            << "耗时: " << output.elapsed_ms << " 毫秒\n";
+    } else {
+        oss << "Terms: " << output.terms << "\n"
+            << "Digits: " << output.decimal_digits << "\n"
+            << "Time: " << output.elapsed_ms << " ms\n";
+    }
     return oss.str();
 }
 
@@ -126,12 +142,13 @@ expected<void, IOError> write_text_file(const std::filesystem::path& path,
     }
 }
 
-expected<ComputeOptions, IOError> read_interactive_options(std::istream& is) {
-    return read_interactive_options(ComputeOptions{}, is);
+expected<ComputeOptions, IOError> read_interactive_options(
+    Language lang, std::istream& is) {
+    return read_interactive_options(ComputeOptions{}, lang, is);
 }
 
 expected<ComputeOptions, IOError> read_interactive_options(
-    const ComputeOptions& defaults, std::istream& is) {
+    const ComputeOptions& defaults, Language lang, std::istream& is) {
     // The "last digit" easter egg needs no further input.
     if (defaults.last_digit_easter_egg) {
         return defaults;
@@ -139,8 +156,11 @@ expected<ComputeOptions, IOError> read_interactive_options(
 
     ComputeOptions options = defaults;
 
+    const bool chinese = (lang == Language::Chinese);
+
     if (options.terms == 0) {
-        std::cout << "Enter the number of terms (N): ";
+        std::cout << (chinese ? "请输入项数 N（正整数）: "
+                              : "Enter the number of terms (N): ");
         std::string line;
         if (!std::getline(is, line)) {
             return IOError::InteractiveInputFailed;
@@ -153,12 +173,16 @@ expected<ComputeOptions, IOError> read_interactive_options(
     }
 
     if (!options.output_path.has_value()) {
-        auto save = read_yes_no("Save to file? (y/n): ", is);
+        auto save = read_yes_no(
+            chinese ? "是否保存到文件？(y/n): "
+                    : "Save to file? (y/n): ",
+            lang, is);
         if (!save) {
             return save.error();
         }
         if (*save) {
-            std::cout << "Enter output file path: ";
+            std::cout << (chinese ? "请输入输出文件路径: "
+                                  : "Enter output file path: ");
             std::string path_str;
             if (!std::getline(is, path_str)) {
                 return IOError::InteractiveInputFailed;
@@ -176,7 +200,10 @@ expected<ComputeOptions, IOError> read_interactive_options(
     }
 
     if (!options.show_stats) {
-        auto stats = read_yes_no("Show statistics? (y/n): ", is);
+        auto stats = read_yes_no(
+            chinese ? "是否显示统计信息？(y/n): "
+                    : "Show statistics? (y/n): ",
+            lang, is);
         if (!stats) {
             return stats.error();
         }
@@ -184,7 +211,10 @@ expected<ComputeOptions, IOError> read_interactive_options(
     }
 
     if (!options.quiet) {
-        auto quiet = read_yes_no("Quiet mode (do not print pi)? (y/n): ", is);
+        auto quiet = read_yes_no(
+            chinese ? "是否开启安静模式（不打印 π）？(y/n): "
+                    : "Quiet mode (do not print pi)? (y/n): ",
+            lang, is);
         if (!quiet) {
             return quiet.error();
         }
@@ -192,7 +222,8 @@ expected<ComputeOptions, IOError> read_interactive_options(
     }
 
     if (!options.thread_count.has_value()) {
-        std::cout << "Number of worker threads (0 = hardware concurrency): ";
+        std::cout << (chinese ? "工作线程数（0 = 硬件并发数）: "
+                              : "Number of worker threads (0 = hardware concurrency): ");
         std::string line;
         if (!std::getline(is, line)) {
             return IOError::InteractiveInputFailed;
@@ -210,7 +241,10 @@ expected<ComputeOptions, IOError> read_interactive_options(
     }
 
     if (!options.eco_mode) {
-        auto eco = read_yes_no("Eco mode (use fewer threads)? (y/n): ", is);
+        auto eco = read_yes_no(
+            chinese ? "是否开启节能模式（使用更少线程）？(y/n): "
+                    : "Eco mode (use fewer threads)? (y/n): ",
+            lang, is);
         if (!eco) {
             return eco.error();
         }
@@ -218,7 +252,8 @@ expected<ComputeOptions, IOError> read_interactive_options(
     }
 
     if (!options.max_memory_mb.has_value()) {
-        std::cout << "Maximum memory in MB (empty = no limit): ";
+        std::cout << (chinese ? "最大内存限制（单位 MB，留空表示无限制）: "
+                              : "Maximum memory in MB (empty = no limit): ");
         std::string line;
         if (!std::getline(is, line)) {
             return IOError::InteractiveInputFailed;
@@ -234,7 +269,10 @@ expected<ComputeOptions, IOError> read_interactive_options(
     }
 
     if (!options.force) {
-        auto force = read_yes_no("Skip memory safety guard? (y/n): ", is);
+        auto force = read_yes_no(
+            chinese ? "是否跳过内存安全 guard？(y/n): "
+                    : "Skip memory safety guard? (y/n): ",
+            lang, is);
         if (!force) {
             return force.error();
         }
@@ -245,15 +283,29 @@ expected<ComputeOptions, IOError> read_interactive_options(
 }
 
 void print_to_console(const ConsoleOutput& output, bool show_stats,
-                      std::ostream& os) {
+                      Language lang, std::ostream& os) {
     os << output.pi_formatted;
     if (show_stats) {
-        os << "\n" << format_stats(output);
+        os << "\n" << format_stats(output, lang);
     }
     os << "\n";
 }
 
-std::string to_string(IOError error) {
+std::string to_string(IOError error, Language lang) {
+    if (lang == Language::Chinese) {
+        switch (error) {
+            case IOError::FileNotWritable:
+                return "无法写入指定文件";
+            case IOError::PathInvalid:
+                return "文件路径无效";
+            case IOError::PathTooLong:
+                return "文件路径过长";
+            case IOError::InteractiveInputFailed:
+                return "交互输入失败或包含无效数据";
+        }
+        return "未知 I/O 错误";
+    }
+
     switch (error) {
         case IOError::FileNotWritable:
             return "Unable to write to the specified file";

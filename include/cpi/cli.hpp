@@ -5,6 +5,7 @@
 
 #include "cpi/expected.hpp"
 
+#include <cstdint>
 #include <filesystem>
 #include <optional>
 #include <ostream>
@@ -17,6 +18,11 @@ enum class RunMode {
     Help,
     Interactive,
     Compute
+};
+
+enum class Language {
+    English,
+    Chinese,
 };
 
 struct ComputeOptions {
@@ -33,6 +39,7 @@ struct ComputeOptions {
 
 struct CliResult {
     RunMode mode;
+    std::optional<Language> language;
     std::optional<ComputeOptions> compute_options;
 };
 
@@ -45,6 +52,7 @@ enum class CliError {
     ConflictingOptions,
     InvalidThreadCount,
     InvalidMemoryLimit,
+    InvalidLanguage,
 };
 
 [[nodiscard]] expected<uint64_t, CliError> parse_terms(std::string_view s);
@@ -52,10 +60,11 @@ enum class CliError {
     std::string_view s);
 [[nodiscard]] expected<uint64_t, CliError> parse_memory_mb(std::string_view s);
 [[nodiscard]] expected<size_t, CliError> parse_thread_count(std::string_view s);
+[[nodiscard]] std::optional<Language> parse_language(std::string_view s);
 
 expected<CliResult, CliError> parse_cli(int argc, const char* argv[]);
-std::string to_string(CliError error);
+std::string to_string(CliError error, Language lang = Language::Chinese);
 
-void print_help(std::ostream& os);
+void print_help(std::ostream& os, Language lang = Language::Chinese);
 
 } // namespace cpi
