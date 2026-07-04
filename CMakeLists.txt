@@ -69,9 +69,9 @@ target_include_directories(calculate_pi PRIVATE
 find_package(Threads REQUIRED)
 target_link_libraries(calculate_pi PRIVATE Threads::Threads)
 
-# Warning flags
+# Highest optimization level
 if(MSVC)
-    target_compile_options(calculate_pi PRIVATE /W4 /WX-)
+    target_compile_options(calculate_pi PRIVATE /Ox /W4 /WX-)
 else()
-    target_compile_options(calculate_pi PRIVATE -Wall -Wextra -Wpedantic)
+    target_compile_options(calculate_pi PRIVATE -O3 -Wall -Wextra -Wpedantic)
 endif()
