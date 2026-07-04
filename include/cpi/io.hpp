@@ -44,6 +44,8 @@ enum class IOError {
 
 [[nodiscard]] expected<ComputeOptions, IOError> read_interactive_options(
     std::istream& is = std::cin);
+[[nodiscard]] expected<ComputeOptions, IOError> read_interactive_options(
+    const ComputeOptions& defaults, std::istream& is = std::cin);
 
 void print_to_console(const ConsoleOutput& output, bool show_stats,
                       std::ostream& os = std::cout);

@@ -3,11 +3,13 @@
 
 #include "cpi/io.hpp"
 
+#include <cctype>
 #include <fstream>
 #include <iostream>
 #include <limits>
 #include <sstream>
 #include <string>
+#include <string_view>
 
 namespace cpi {
 
@@ -27,6 +29,36 @@ BigInt round_scaled_pi(const BigInt& scaled_pi, uint64_t guard_digits) {
     BigInt rounded = (rounded_up / divisor).value();
     if (scaled_pi.is_negative()) rounded = rounded.negate();
     return rounded;
+}
+
+} // namespace
+
+namespace {
+
+std::string trim_string(const std::string& s) {
+    size_t start = 0;
+    while (start < s.size() &&
+           std::isspace(static_cast<unsigned char>(s[start]))) {
+        ++start;
+    }
+    size_t end = s.size();
+    while (end > start &&
+           std::isspace(static_cast<unsigned char>(s[end - 1]))) {
+        --end;
+    }
+    return s.substr(start, end - start);
+}
+
+expected<bool, IOError> read_yes_no(const std::string& prompt,
+                                      std::istream& is) {
+    std::cout << prompt;
+    std::string line;
+    if (!std::getline(is, line)) {
+        return IOError::InteractiveInputFailed;
+    }
+    const std::string answer = trim_string(line);
+    return !answer.empty() &&
+           (answer[0] == 'y' || answer[0] == 'Y');
 }
 
 } // namespace
@@ -95,93 +127,119 @@ expected<void, IOError> write_text_file(const std::filesystem::path& path,
 }
 
 expected<ComputeOptions, IOError> read_interactive_options(std::istream& is) {
-    std::cout << "Enter the number of terms (N): ";
-    std::string line;
-    if (!std::getline(is, line)) {
-        return IOError::InteractiveInputFailed;
+    return read_interactive_options(ComputeOptions{}, is);
+}
+
+expected<ComputeOptions, IOError> read_interactive_options(
+    const ComputeOptions& defaults, std::istream& is) {
+    // The "last digit" easter egg needs no further input.
+    if (defaults.last_digit_easter_egg) {
+        return defaults;
     }
 
-    // Trim whitespace.
-    size_t start = 0;
-    while (start < line.size() && std::isspace(static_cast<unsigned char>(line[start]))) {
-        ++start;
-    }
-    size_t end = line.size();
-    while (end > start && std::isspace(static_cast<unsigned char>(line[end - 1]))) {
-        --end;
-    }
-    std::string terms_str = line.substr(start, end - start);
+    ComputeOptions options = defaults;
 
-    if (terms_str.empty()) {
-        return IOError::InteractiveInputFailed;
-    }
-
-    for (char c : terms_str) {
-        if (!std::isdigit(static_cast<unsigned char>(c))) {
+    if (options.terms == 0) {
+        std::cout << "Enter the number of terms (N): ";
+        std::string line;
+        if (!std::getline(is, line)) {
             return IOError::InteractiveInputFailed;
         }
-    }
-
-    if (terms_str.size() > 1 && terms_str[0] == '0') {
-        return IOError::InteractiveInputFailed;
-    }
-
-    uint64_t terms;
-    try {
-        size_t pos = 0;
-        unsigned long long value = std::stoull(terms_str, &pos);
-        if (pos != terms_str.size() || value == 0 ||
-            value > std::numeric_limits<uint64_t>::max()) {
+        auto terms = parse_terms(trim_string(line));
+        if (!terms) {
             return IOError::InteractiveInputFailed;
         }
-        terms = static_cast<uint64_t>(value);
-    } catch (const std::exception&) {
-        return IOError::InteractiveInputFailed;
+        options.terms = *terms;
     }
 
-    ComputeOptions options;
-    options.terms = terms;
-
-    std::cout << "Save to file? (y/n): ";
-    std::string save_answer;
-    if (!std::getline(is, save_answer)) {
-        return IOError::InteractiveInputFailed;
-    }
-    if (!save_answer.empty() &&
-        (save_answer[0] == 'y' || save_answer[0] == 'Y')) {
-        std::cout << "Enter output file path: ";
-        std::string path_str;
-        if (!std::getline(is, path_str)) {
-            return IOError::InteractiveInputFailed;
+    if (!options.output_path.has_value()) {
+        auto save = read_yes_no("Save to file? (y/n): ", is);
+        if (!save) {
+            return save.error();
         }
-        // Trim.
-        size_t pstart = 0;
-        while (pstart < path_str.size() &&
-               std::isspace(static_cast<unsigned char>(path_str[pstart]))) {
-            ++pstart;
-        }
-        size_t pend = path_str.size();
-        while (pend > pstart &&
-               std::isspace(static_cast<unsigned char>(path_str[pend - 1]))) {
-            --pend;
-        }
-        if (pstart < pend) {
-            try {
-                options.output_path = std::filesystem::path(
-                    path_str.substr(pstart, pend - pstart));
-            } catch (const std::exception&) {
+        if (*save) {
+            std::cout << "Enter output file path: ";
+            std::string path_str;
+            if (!std::getline(is, path_str)) {
                 return IOError::InteractiveInputFailed;
             }
+            std::string trimmed = trim_string(path_str);
+            if (trimmed.empty()) {
+                return IOError::InteractiveInputFailed;
+            }
+            auto path = parse_output_path(trimmed);
+            if (!path) {
+                return IOError::InteractiveInputFailed;
+            }
+            options.output_path = *path;
         }
     }
 
-    std::cout << "Show statistics? (y/n): ";
-    std::string stats_answer;
-    if (!std::getline(is, stats_answer)) {
-        return IOError::InteractiveInputFailed;
+    if (!options.show_stats) {
+        auto stats = read_yes_no("Show statistics? (y/n): ", is);
+        if (!stats) {
+            return stats.error();
+        }
+        options.show_stats = *stats;
     }
-    options.show_stats =
-        !stats_answer.empty() && (stats_answer[0] == 'y' || stats_answer[0] == 'Y');
+
+    if (!options.quiet) {
+        auto quiet = read_yes_no("Quiet mode (do not print pi)? (y/n): ", is);
+        if (!quiet) {
+            return quiet.error();
+        }
+        options.quiet = *quiet;
+    }
+
+    if (!options.thread_count.has_value()) {
+        std::cout << "Number of worker threads (0 = hardware concurrency): ";
+        std::string line;
+        if (!std::getline(is, line)) {
+            return IOError::InteractiveInputFailed;
+        }
+        std::string trimmed = trim_string(line);
+        if (trimmed.empty()) {
+            options.thread_count = size_t{0};
+        } else {
+            auto count = parse_thread_count(trimmed);
+            if (!count) {
+                return IOError::InteractiveInputFailed;
+            }
+            options.thread_count = *count;
+        }
+    }
+
+    if (!options.eco_mode) {
+        auto eco = read_yes_no("Eco mode (use fewer threads)? (y/n): ", is);
+        if (!eco) {
+            return eco.error();
+        }
+        options.eco_mode = *eco;
+    }
+
+    if (!options.max_memory_mb.has_value()) {
+        std::cout << "Maximum memory in MB (empty = no limit): ";
+        std::string line;
+        if (!std::getline(is, line)) {
+            return IOError::InteractiveInputFailed;
+        }
+        std::string trimmed = trim_string(line);
+        if (!trimmed.empty()) {
+            auto mb = parse_memory_mb(trimmed);
+            if (!mb) {
+                return IOError::InteractiveInputFailed;
+            }
+            options.max_memory_mb = *mb;
+        }
+    }
+
+    if (!options.force) {
+        auto force = read_yes_no("Skip memory safety guard? (y/n): ", is);
+        if (!force) {
+            return force.error();
+        }
+        options.force = *force;
+    }
 
     return options;
 }

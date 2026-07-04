@@ -1,5 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="695.6" height="460" viewBox="0 0 695.6 460" role="img" aria-label="calculate_pi --help" >
-  <rect width="695.6" height="460" rx="8" ry="8" fill="#1e1e1e" />
+<svg xmlns="http://www.w3.org/2000/svg" width="695.6" height="480" viewBox="0 0 695.6 480" role="img" aria-label="calculate_pi --help" >
+  <rect width="695.6" height="480" rx="8" ry="8" fill="#1e1e1e" />
   <rect width="695.6" height="28" rx="8" ry="8" fill="#2d2d2d" />
   <text x="347.8" y="19.0" fill="#cccccc" font-family="sans-serif" font-size="12" text-anchor="middle">calculate_pi --help</text>
   <text x="16" y="44" fill="#4ec9b0" font-family="Consolas, Monaco, 'Courier New', monospace" font-size="14" xml:space="preserve">$ ./build/calculate_pi --help</text>
@@ -8,18 +8,20 @@
   <text x="16" y="104" fill="#d4d4d4" font-family="Consolas, Monaco, 'Courier New', monospace" font-size="14" xml:space="preserve">Usage:</text>
   <text x="16" y="124" fill="#d4d4d4" font-family="Consolas, Monaco, 'Courier New', monospace" font-size="14" xml:space="preserve">  CalculatePi [options]</text>
   <text x="16" y="144" fill="#d4d4d4" font-family="Consolas, Monaco, 'Courier New', monospace" font-size="14" xml:space="preserve">  CalculatePi --terms &lt;N&gt; [-o &lt;path&gt;] [--stats]</text>
-  <text x="16" y="164" fill="#d4d4d4" font-family="Consolas, Monaco, 'Courier New', monospace" font-size="14" xml:space="preserve"></text>
-  <text x="16" y="184" fill="#d4d4d4" font-family="Consolas, Monaco, 'Courier New', monospace" font-size="14" xml:space="preserve">Options:</text>
-  <text x="16" y="204" fill="#d4d4d4" font-family="Consolas, Monaco, 'Courier New', monospace" font-size="14" xml:space="preserve">  -n, --terms &lt;N&gt;      Number of Chudnovsky series terms (required in CLI mode)</text>
-  <text x="16" y="224" fill="#d4d4d4" font-family="Consolas, Monaco, 'Courier New', monospace" font-size="14" xml:space="preserve">  -o, --output &lt;path&gt;  Write the result to the specified file</text>
-  <text x="16" y="244" fill="#d4d4d4" font-family="Consolas, Monaco, 'Courier New', monospace" font-size="14" xml:space="preserve">      --stats          Print additional statistics</text>
-  <text x="16" y="264" fill="#d4d4d4" font-family="Consolas, Monaco, 'Courier New', monospace" font-size="14" xml:space="preserve">  -q, --quiet          Do not print the full pi string to the console</text>
-  <text x="16" y="284" fill="#d4d4d4" font-family="Consolas, Monaco, 'Courier New', monospace" font-size="14" xml:space="preserve">  -t, --threads &lt;N&gt;    Number of worker threads (0 = hardware concurrency)</text>
-  <text x="16" y="304" fill="#d4d4d4" font-family="Consolas, Monaco, 'Courier New', monospace" font-size="14" xml:space="preserve">  -e, --eco            Use fewer threads to reduce CPU load</text>
-  <text x="16" y="324" fill="#d4d4d4" font-family="Consolas, Monaco, 'Courier New', monospace" font-size="14" xml:space="preserve">  -m, --max-memory-mb  Maximum memory the computation may use in MB</text>
-  <text x="16" y="344" fill="#d4d4d4" font-family="Consolas, Monaco, 'Courier New', monospace" font-size="14" xml:space="preserve">  -f, --force          Skip the memory safety guard</text>
-  <text x="16" y="364" fill="#d4d4d4" font-family="Consolas, Monaco, 'Courier New', monospace" font-size="14" xml:space="preserve">      --last-digit     Explain that pi has no last digit</text>
-  <text x="16" y="384" fill="#d4d4d4" font-family="Consolas, Monaco, 'Courier New', monospace" font-size="14" xml:space="preserve">  -h, --help           Show this help message</text>
-  <text x="16" y="404" fill="#d4d4d4" font-family="Consolas, Monaco, 'Courier New', monospace" font-size="14" xml:space="preserve"></text>
-  <text x="16" y="424" fill="#d4d4d4" font-family="Consolas, Monaco, 'Courier New', monospace" font-size="14" xml:space="preserve">If no arguments are given, the program enters interactive mode.</text>
+  <text x="16" y="164" fill="#d4d4d4" font-family="Consolas, Monaco, 'Courier New', monospace" font-size="14" xml:space="preserve">  CalculatePi --interactive [options]</text>
+  <text x="16" y="184" fill="#d4d4d4" font-family="Consolas, Monaco, 'Courier New', monospace" font-size="14" xml:space="preserve"></text>
+  <text x="16" y="204" fill="#d4d4d4" font-family="Consolas, Monaco, 'Courier New', monospace" font-size="14" xml:space="preserve">Options:</text>
+  <text x="16" y="224" fill="#d4d4d4" font-family="Consolas, Monaco, 'Courier New', monospace" font-size="14" xml:space="preserve">  -n, --terms &lt;N&gt;      Number of Chudnovsky series terms (required in CLI mode)</text>
+  <text x="16" y="244" fill="#d4d4d4" font-family="Consolas, Monaco, 'Courier New', monospace" font-size="14" xml:space="preserve">  -o, --output &lt;path&gt;  Write the result to the specified file</text>
+  <text x="16" y="264" fill="#d4d4d4" font-family="Consolas, Monaco, 'Courier New', monospace" font-size="14" xml:space="preserve">      --stats          Print additional statistics</text>
+  <text x="16" y="284" fill="#d4d4d4" font-family="Consolas, Monaco, 'Courier New', monospace" font-size="14" xml:space="preserve">  -q, --quiet          Do not print the full pi string to the console</text>
+  <text x="16" y="304" fill="#d4d4d4" font-family="Consolas, Monaco, 'Courier New', monospace" font-size="14" xml:space="preserve">  -t, --threads &lt;N&gt;    Number of worker threads (0 = hardware concurrency)</text>
+  <text x="16" y="324" fill="#d4d4d4" font-family="Consolas, Monaco, 'Courier New', monospace" font-size="14" xml:space="preserve">  -e, --eco            Use fewer threads to reduce CPU load</text>
+  <text x="16" y="344" fill="#d4d4d4" font-family="Consolas, Monaco, 'Courier New', monospace" font-size="14" xml:space="preserve">  -m, --max-memory-mb  Maximum memory the computation may use in MB</text>
+  <text x="16" y="364" fill="#d4d4d4" font-family="Consolas, Monaco, 'Courier New', monospace" font-size="14" xml:space="preserve">  -f, --force          Skip the memory safety guard</text>
+  <text x="16" y="384" fill="#d4d4d4" font-family="Consolas, Monaco, 'Courier New', monospace" font-size="14" xml:space="preserve">      --last-digit     Explain that pi has no last digit</text>
+  <text x="16" y="404" fill="#d4d4d4" font-family="Consolas, Monaco, 'Courier New', monospace" font-size="14" xml:space="preserve">  -i, --interactive    Enter interactive mode (use other flags as defaults)</text>
+  <text x="16" y="424" fill="#d4d4d4" font-family="Consolas, Monaco, 'Courier New', monospace" font-size="14" xml:space="preserve">  -h, --help           Show this help message</text>
+  <text x="16" y="444" fill="#d4d4d4" font-family="Consolas, Monaco, 'Courier New', monospace" font-size="14" xml:space="preserve"></text>
+  <text x="16" y="464" fill="#d4d4d4" font-family="Consolas, Monaco, 'Courier New', monospace" font-size="14" xml:space="preserve">If no arguments are given, the program enters interactive mode.</text>
 </svg>

@@ -20,6 +20,8 @@ bool is_decimal_uint64(std::string_view s) {
     return true;
 }
 
+} // namespace
+
 expected<uint64_t, CliError> parse_terms(std::string_view s) {
     if (!is_decimal_uint64(s)) {
         return CliError::InvalidTermsFormat;
@@ -94,21 +96,25 @@ expected<size_t, CliError> parse_thread_count(std::string_view s) {
     }
 }
 
-} // namespace
-
 expected<CliResult, CliError> parse_cli(int argc, const char* argv[]) {
     if (argc == 1) {
-        return CliResult{RunMode::Interactive, std::nullopt};
+        return CliResult{RunMode::Interactive, ComputeOptions{}};
     }
 
     CliResult result{RunMode::Compute, ComputeOptions{}};
     ComputeOptions& opts = *result.compute_options;
+    bool interactive_requested = false;
 
     for (int i = 1; i < argc; ++i) {
         std::string_view arg(argv[i]);
 
         if (arg == "--help" || arg == "-h") {
             return CliResult{RunMode::Help, std::nullopt};
+        }
+
+        if (arg == "--interactive" || arg == "-i") {
+            interactive_requested = true;
+            continue;
         }
 
         if (arg == "--terms" || arg == "-n") {
@@ -185,8 +191,13 @@ expected<CliResult, CliError> parse_cli(int argc, const char* argv[]) {
         return CliError::UnknownArgument;
     }
 
+    if (interactive_requested) {
+        result.mode = RunMode::Interactive;
+    }
+
     // --terms is required for compute mode unless --last-digit is used.
-    if (opts.terms == 0 && !opts.last_digit_easter_egg) {
+    if (result.mode == RunMode::Compute && opts.terms == 0 &&
+        !opts.last_digit_easter_egg) {
         return CliError::MissingArgumentValue;
     }
 
@@ -221,6 +232,7 @@ void print_help(std::ostream& os) {
        << "Usage:\n"
        << "  CalculatePi [options]\n"
        << "  CalculatePi --terms <N> [-o <path>] [--stats]\n"
+       << "  CalculatePi --interactive [options]\n"
        << "\n"
        << "Options:\n"
        << "  -n, --terms <N>      Number of Chudnovsky series terms (required in CLI mode)\n"
@@ -232,6 +244,7 @@ void print_help(std::ostream& os) {
        << "  -m, --max-memory-mb  Maximum memory the computation may use in MB\n"
        << "  -f, --force          Skip the memory safety guard\n"
        << "      --last-digit     Explain that pi has no last digit\n"
+       << "  -i, --interactive    Enter interactive mode (use other flags as defaults)\n"
        << "  -h, --help           Show this help message\n"
        << "\n"
        << "If no arguments are given, the program enters interactive mode.\n";

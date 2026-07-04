@@ -29,6 +29,7 @@ Calculate Pi - Chudnovsky binary splitting
 Usage:
   CalculatePi [options]
   CalculatePi --terms <N> [-o <path>] [--stats]
+  CalculatePi --interactive [options]
 
 Options:
   -n, --terms <N>      Number of Chudnovsky series terms (required in CLI mode)
@@ -40,6 +41,7 @@ Options:
   -m, --max-memory-mb  Maximum memory the computation may use in MB
   -f, --force          Skip the memory safety guard
       --last-digit     Explain that pi has no last digit
+  -i, --interactive    Enter interactive mode (use other flags as defaults)
   -h, --help           Show this help message
 
 If no arguments are given, the program enters interactive mode.
@@ -149,29 +151,53 @@ cmake --build build --config Release
 ./build/calculate_pi --last-digit
 ```
 
-> **Windows 用户**：请将上面的 `./build/calculate_pi` 替换为 `./build/calculate_pi.exe`。
->
-> **Windows users**: replace `./build/calculate_pi` above with `./build/calculate_pi.exe`.
-
 ### 交互模式 / Interactive mode
 
-不传递任何参数即可进入交互模式：
+不传递任何参数，或使用 `-i` / `--interactive` 标志，即可进入交互模式：
 
 ```bash
+# 完整交互模式
 ./build/calculate_pi
+
+# 用命令行选项作为默认值，缺失的值再交互式询问
+./build/calculate_pi --interactive --terms 100
+./build/calculate_pi --interactive -o pi.txt --stats
 ```
 
-程序会依次询问：
+程序会依次询问（若已通过命令行指定则跳过）：
 
 1. 项数 `N`（正整数）
 2. 是否保存到文件
-3. 是否显示统计信息
+3. 输出文件路径（如果回答“是”）
+4. 是否显示统计信息
+5. 是否开启安静模式（不打印 π 字符串）
+6. 工作线程数（`0` 表示使用硬件并发数）
+7. 是否开启节能模式（使用更少线程）
+8. 最大内存限制（单位 MB，留空表示无限制）
+9. 是否跳过内存安全 guard
 
-Run without arguments to enter interactive mode. The program will ask for:
+Run without arguments, or use `-i` / `--interactive`, to enter interactive mode:
+
+```bash
+# Full interactive mode
+./build/calculate_pi
+
+# Use command-line options as defaults, then prompt for the rest
+./build/calculate_pi --interactive --terms 100
+./build/calculate_pi --interactive -o pi.txt --stats
+```
+
+The program will ask for the following (skipping any value already provided on the command line):
 
 1. Number of terms `N` (positive integer)
 2. Whether to save to a file
-3. Whether to show statistics
+3. Output file path (if answered “yes”)
+4. Whether to show statistics
+5. Whether to enable quiet mode (do not print the pi string)
+6. Number of worker threads (`0` means hardware concurrency)
+7. Whether to enable eco mode (use fewer threads)
+8. Maximum memory limit in MB (leave empty for no limit)
+9. Whether to skip the memory safety guard
 
 ---
 

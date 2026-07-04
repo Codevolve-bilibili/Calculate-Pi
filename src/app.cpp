@@ -104,7 +104,8 @@ expected<ComputeOptions, AppError> Application::gather_options(
     }
 
     if (cli.mode == RunMode::Interactive) {
-        auto opts = read_interactive_options();
+        auto opts = read_interactive_options(
+            cli.compute_options.value_or(ComputeOptions{}));
         if (!opts) {
             print_error(to_string(opts.error()), std::cerr);
             return AppError::IOError;
@@ -165,7 +166,7 @@ int Application::run_compute(const ComputeOptions& options) {
     ChudnovskyOptions chud_opts{options.terms, output_digits, guard_digits};
 
     // Determine thread count.
-    size_t num_threads = options.thread_count;
+    size_t num_threads = options.thread_count.value_or(0);
     if (num_threads == 0) {
         num_threads = std::max(
             size_t{1}, static_cast<size_t>(std::thread::hardware_concurrency()));
