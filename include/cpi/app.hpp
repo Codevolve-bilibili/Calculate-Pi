@@ -33,6 +33,7 @@ private:
     Language resolve_language(const CliResult& cli, std::istream& is);
 
     int run_compute(const ComputeOptions& options, Language lang);
+    int run_infinite(const ComputeOptions& options, Language lang);
     expected<ComputeOptions, AppError> gather_options(
         const CliResult& cli, Language lang);
 };

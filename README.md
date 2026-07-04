@@ -31,21 +31,27 @@ Calculate Pi - 楚德诺夫斯基二进制分裂算法
 用法:
   CalculatePi [选项]
   CalculatePi --terms <N> [-o <路径>] [--stats]
+  CalculatePi --infinite --terms <N> --step <S> --output <目录> [选项]
   CalculatePi --interactive [选项]
 
 选项:
-  -n, --terms <N>      楚德诺夫斯基级数项数（命令行模式下必需）
-  -o, --output <路径>  将结果写入指定文件
-      --stats          显示额外统计信息
-  -q, --quiet          不在控制台打印完整 π 字符串
-  -t, --threads <N>    工作线程数（0 = 硬件并发数）
-  -e, --eco            使用更少线程以降低 CPU 负载
-  -m, --max-memory-mb  计算允许使用的最大内存（MB）
-  -f, --force          跳过内存安全检查
-      --last-digit     说明 π 没有最后一位
-  -l, --lang <语言>    界面语言：en/english/英文 或 zh/chinese/中文
-  -i, --interactive    进入交互模式（将其他标志作为默认值）
-  -h, --help           显示此帮助信息
+  -n, --terms <N>             楚德诺夫斯基级数项数（命令行模式下必需）
+  -o, --output <路径>         将结果写入指定文件或目录
+      --stats                 显示额外统计信息
+  -q, --quiet                 不在控制台打印完整 π 字符串
+  -t, --threads <N>           工作线程数（0 = 硬件并发数）
+  -e, --eco                   使用更少线程以降低 CPU 负载
+  -m, --max-memory-mb         计算允许使用的最大内存（MB）
+  -f, --force                 跳过内存安全检查
+      --last-digit            说明 π 没有最后一位
+      --infinite              启用无限计算模式（CLI 专用）
+      --step <N>              无限模式下每次增加的项数
+      --infinite-max-files <N>  最多生成 N 个文件
+      --infinite-max-time <N>   最长运行时间
+      --infinite-max-time-unit <s/m/h>  时间单位（默认秒）
+  -l, --lang <语言>           界面语言：en/english/英文 或 zh/chinese/中文
+  -i, --interactive           进入交互模式（将其他标志作为默认值）
+  -h, --help                  显示此帮助信息
 
 若未提供任何参数，程序将进入交互模式。
 ```
@@ -60,21 +66,27 @@ Calculate Pi - Chudnovsky binary splitting
 Usage:
   CalculatePi [options]
   CalculatePi --terms <N> [-o <path>] [--stats]
+  CalculatePi --infinite --terms <N> --step <S> --output <dir> [options]
   CalculatePi --interactive [options]
 
 Options:
-  -n, --terms <N>      Number of Chudnovsky series terms (required in CLI mode)
-  -o, --output <path>  Write the result to the specified file
-      --stats          Print additional statistics
-  -q, --quiet          Do not print the full pi string to the console
-  -t, --threads <N>    Number of worker threads (0 = hardware concurrency)
-  -e, --eco            Use fewer threads to reduce CPU load
-  -m, --max-memory-mb  Maximum memory the computation may use in MB
-  -f, --force          Skip the memory safety guard
-      --last-digit     Explain that pi has no last digit
-  -l, --lang <lang>    UI language: en/english/英文 or zh/chinese/中文
-  -i, --interactive    Enter interactive mode (use other flags as defaults)
-  -h, --help           Show this help message
+  -n, --terms <N>             Number of Chudnovsky series terms (required in CLI mode)
+  -o, --output <path>         Write the result to the specified file or directory
+      --stats                 Print additional statistics
+  -q, --quiet                 Do not print the full pi string to the console
+  -t, --threads <N>           Number of worker threads (0 = hardware concurrency)
+  -e, --eco                   Use fewer threads to reduce CPU load
+  -m, --max-memory-mb         Maximum memory the computation may use in MB
+  -f, --force                 Skip the memory safety guard
+      --last-digit            Explain that pi has no last digit
+      --infinite              Enable infinite computation mode (CLI only)
+      --step <N>              Terms added per iteration in infinite mode
+      --infinite-max-files <N> Generate at most N files
+      --infinite-max-time <N>  Maximum total running time
+      --infinite-max-time-unit <s/m/h> Time unit (default seconds)
+  -l, --lang <lang>            UI language: en/english/英文 or zh/chinese/中文
+  -i, --interactive           Enter interactive mode (use other flags as defaults)
+  -h, --help                  Show this help message
 
 If no arguments are given, the program enters interactive mode.
 ```
@@ -196,6 +208,16 @@ cmake --build build --config Release
 
 # π 的最后一位彩蛋 / Pi last digit easter egg
 ./build/calculate_pi --last-digit
+
+# 无限计算模式：从 100 项开始，每次增加 100 项，保存到 ./out 目录
+# Infinite mode: start at 100 terms, add 100 terms per iteration, save to ./out
+./build/calculate_pi --infinite --terms 100 --step 100 --output ./out
+
+# 限制生成 5 个文件 / Limit to 5 files
+./build/calculate_pi --infinite --terms 100 --step 100 --output ./out --infinite-max-files 5
+
+# 限制运行 30 秒 / Limit runtime to 30 seconds
+./build/calculate_pi --infinite --terms 100 --step 100 --output ./out --infinite-max-time 30 --infinite-max-time-unit s
 ```
 
 ### 交互模式 / Interactive mode

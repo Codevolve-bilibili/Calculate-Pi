@@ -9,6 +9,8 @@
 #include "cpi/sysinfo.hpp"
 
 #include <algorithm>
+#include <chrono>
+#include <ctime>
 #include <filesystem>
 #include <functional>
 #include <iomanip>
@@ -73,6 +75,46 @@ std::string format_memory_mib(uint64_t bytes) {
     std::ostringstream oss;
     oss << std::fixed << std::setprecision(1) << mib << " MiB";
     return oss.str();
+}
+
+// Compute the memory limit in bytes from ComputeOptions.
+uint64_t compute_allowed_memory_bytes(const ComputeOptions& options) {
+    if (options.max_memory_mb.has_value()) {
+        return *options.max_memory_mb * 1024 * 1024;
+    }
+    auto total_mem = total_physical_memory_bytes();
+    if (total_mem.has_value()) {
+        // Default guard: allow up to 50% of physical memory.
+        return *total_mem / 2;
+    }
+    // Conservative fallback when system memory is unknown.
+    constexpr uint64_t kFallbackBytes = 1024ULL * 1024 * 1024;
+    return kFallbackBytes;
+}
+
+// Generate a timestamped filename for infinite mode: pi_YYYYMMDD_HHMMSS_mmm.txt.
+std::filesystem::path generate_infinite_filename(
+    const std::filesystem::path& dir) {
+    auto now = std::chrono::system_clock::now();
+    auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+                  now.time_since_epoch()) %
+              1000;
+    std::time_t t = std::chrono::system_clock::to_time_t(now);
+
+    std::tm local_tm{};
+#ifdef _WIN32
+    localtime_s(&local_tm, &t);
+#else
+    localtime_r(&t, &local_tm);
+#endif
+
+    char buf[64];
+    std::strftime(buf, sizeof(buf), "%Y%m%d_%H%M%S", &local_tm);
+
+    std::ostringstream name;
+    name << "pi_" << buf << '_' << std::setfill('0') << std::setw(3)
+         << ms.count() << ".txt";
+    return dir / name.str();
 }
 
 } // namespace
@@ -188,6 +230,10 @@ int Application::run_compute(const ComputeOptions& options, Language lang) {
                       << "Use --terms <N> to compute the first N digits, or --help for more options.\n";
         }
         return 0;
+    }
+
+    if (options.infinite) {
+        return run_infinite(options, lang);
     }
 
     // Determine output digits from terms.
@@ -404,6 +450,170 @@ int Application::run_compute(const ComputeOptions& options, Language lang) {
     } else if (progress_callback) {
         progress_callback(1.0);
         std::cerr << '\n';
+    }
+
+    return 0;
+}
+
+int Application::run_infinite(const ComputeOptions& options, Language lang) {
+    const auto& out_dir = *options.output_path;
+
+    try {
+        std::filesystem::create_directories(out_dir);
+    } catch (const std::filesystem::filesystem_error& e) {
+        std::ostringstream oss;
+        if (lang == Language::Chinese) {
+            oss << "无法创建输出目录: ";
+        } else {
+            oss << "Unable to create output directory: ";
+        }
+        oss << e.what();
+        print_error(oss.str(), std::cerr);
+        return static_cast<int>(AppError::IOError);
+    }
+
+    if (!std::filesystem::is_directory(out_dir)) {
+        print_error(lang == Language::Chinese ? "输出路径不是目录"
+                                              : "Output path is not a directory",
+                    std::cerr);
+        return static_cast<int>(AppError::IOError);
+    }
+
+    // Determine thread count.
+    size_t num_threads = options.thread_count.value_or(0);
+    if (num_threads == 0) {
+        num_threads = std::max(
+            size_t{1}, static_cast<size_t>(std::thread::hardware_concurrency()));
+    }
+    if (options.eco_mode && num_threads > 1) {
+        num_threads = std::max(size_t{1}, num_threads / 2);
+    }
+
+    if (options.eco_mode) {
+        set_eco_priority();
+    }
+
+    auto pool = std::make_shared<ThreadPool>(num_threads);
+
+    uint64_t allowed_bytes = std::numeric_limits<uint64_t>::max();
+    if (!options.force) {
+        allowed_bytes = compute_allowed_memory_bytes(options);
+    }
+
+    std::optional<std::chrono::seconds> max_duration;
+    if (options.infinite_max_time_seconds.has_value()) {
+        max_duration = std::chrono::seconds(*options.infinite_max_time_seconds);
+    }
+    auto loop_start = std::chrono::steady_clock::now();
+
+    ChudnovskyState state;
+    state.P = BigInt(1);
+    state.Q = BigInt(1);
+    state.T = BigInt(0);
+    state.terms = 0;
+
+    uint64_t current_terms = options.terms;
+    uint64_t iteration = 0;
+    uint64_t files_created = 0;
+    constexpr uint64_t kGuardDigits = 5;
+
+    while (true) {
+        ++iteration;
+
+        if (options.infinite_max_files.has_value() &&
+            files_created >= *options.infinite_max_files) {
+            break;
+        }
+
+        if (max_duration.has_value()) {
+            auto elapsed = std::chrono::steady_clock::now() - loop_start;
+            if (elapsed >= *max_duration) {
+                break;
+            }
+        }
+
+        uint64_t output_digits = digits_for_terms(current_terms);
+        if (output_digits == 0) {
+            output_digits = 1;
+        } else {
+            --output_digits;
+        }
+        uint64_t scale_digits = output_digits + kGuardDigits;
+
+        if (!options.force) {
+            uint64_t estimated_bytes = estimate_memory_bytes(scale_digits);
+            if (estimated_bytes > allowed_bytes) {
+                std::ostringstream oss;
+                if (lang == Language::Chinese) {
+                    oss << "请求的项数大约需要 "
+                       << format_memory_mib(estimated_bytes)
+                       << " 内存。\n"
+                       << "请使用更小的 --step、--max-memory-mb <M> 或 --force 继续。\n";
+                } else {
+                    oss << "Requested terms would require approximately "
+                       << format_memory_mib(estimated_bytes)
+                       << " of memory.\n"
+                       << "Use a smaller --step, --max-memory-mb <M>, or --force to proceed anyway.\n";
+                }
+                print_error(oss.str(), std::cerr);
+                return static_cast<int>(AppError::MemoryGuard);
+            }
+        }
+
+        ChudnovskyOptions chud_opts;
+        chud_opts.terms = current_terms;
+        chud_opts.output_digits = output_digits;
+        chud_opts.guard_digits = kGuardDigits;
+        // No progress callback in infinite mode to keep console output clean.
+
+        ChudnovskyCalculator calculator(chud_opts, pool);
+        auto result = calculator.compute_incremental(current_terms, output_digits,
+                                                     state);
+        if (!result) {
+            print_error(to_string(result.error()), std::cerr);
+            return 1;
+        }
+
+        PiValue pi = std::move(result->first);
+        state = std::move(result->second);
+
+        auto file_path = generate_infinite_filename(out_dir);
+        FileSink file_sink(file_path);
+        if (!file_sink.good()) {
+            print_error(to_string(file_sink.error(), lang), std::cerr);
+            return 1;
+        }
+        auto write_res = stream_pi(pi.scaled_pi, output_digits, pi.guard_digits,
+                                   file_sink, /*progress_callback=*/{});
+        if (!write_res) {
+            print_error(to_string(write_res.error(), lang), std::cerr);
+            return 1;
+        }
+        ++files_created;
+
+        ConsoleOutput stats;
+        stats.terms = current_terms;
+        stats.decimal_digits = output_digits;
+        stats.elapsed_ms = pi.elapsed_ms;
+
+        if (lang == Language::Chinese) {
+            std::cout << "第 " << iteration << " 次迭代\n";
+        } else {
+            std::cout << "Iteration " << iteration << '\n';
+        }
+        std::cout << format_stats(stats, lang);
+        std::cout << (lang == Language::Chinese ? "输出文件: " : "Output file: ")
+                  << file_path << "\n\n";
+
+        if (current_terms > std::numeric_limits<uint64_t>::max() - options.step) {
+            if (lang == Language::Chinese) {
+                std::cout << "已达到 uint64_t 项数上限，停止。\n";
+            } else {
+                std::cout << "Reached uint64_t term limit, stopping.\n";
+            }
+            break;
+        }
+        current_terms += options.step;
     }
 
     return 0;

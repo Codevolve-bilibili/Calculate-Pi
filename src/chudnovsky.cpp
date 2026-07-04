@@ -59,17 +59,26 @@ expected<PiValue, ComputeError> ChudnovskyCalculator::compute() {
         return ComputeError::InsufficientPrecision;
     }
 
-    const uint64_t guard = options_.guard_digits;
-    const uint64_t scale_digits = options_.output_digits + guard;
+    ChudnovskyState identity;
+    identity.P = BigInt(1);
+    identity.Q = BigInt(1);
+    identity.T = BigInt(0);
+    identity.terms = 0;
 
+    auto result = compute_incremental(options_.terms, options_.output_digits,
+                                      identity);
+    if (!result) {
+        return result.error();
+    }
+    return std::move(result->first);
+}
+
+expected<PiValue, ComputeError> ChudnovskyCalculator::finalize_pi(
+    const SplitResult& result,
+    std::chrono::steady_clock::time_point start) {
     try {
-        if (options_.progress_callback) {
-            completed_terms_.store(0, std::memory_order_relaxed);
-            overall_progress_.store(0.0, std::memory_order_relaxed);
-            report_progress(0.0);
-        }
-
-        auto start = std::chrono::steady_clock::now();
+        const uint64_t guard = options_.guard_digits;
+        const uint64_t scale_digits = options_.output_digits + guard;
 
         // S = floor(sqrt(10005) * 10^scale_digits).
         // Compute as floor(sqrt(10005 * 10^(2*scale_digits))).
@@ -83,7 +92,6 @@ expected<PiValue, ComputeError> ChudnovskyCalculator::compute() {
         // C_s = 426880 * S.
         BigInt C_s = BigInt(kC) * S;
 
-        SplitResult result = binary_split(0, options_.terms);
         report_progress(0.15);
 
         if (result.T.is_zero()) {
@@ -108,6 +116,60 @@ expected<PiValue, ComputeError> ChudnovskyCalculator::compute() {
         value.guard_digits = guard;
         value.elapsed_ms = elapsed_ms;
         return value;
+    } catch (const std::bad_alloc&) {
+        return ComputeError::OutOfMemory;
+    }
+}
+
+expected<std::pair<PiValue, ChudnovskyState>, ComputeError>
+ChudnovskyCalculator::compute_incremental(uint64_t new_terms,
+                                          uint64_t output_digits,
+                                          const ChudnovskyState& previous) {
+    if (new_terms == 0) {
+        return ComputeError::InvalidTerms;
+    }
+    if (previous.terms >= new_terms) {
+        return ComputeError::InvalidTerms;
+    }
+    if (output_digits == 0) {
+        return ComputeError::InsufficientPrecision;
+    }
+
+    options_.terms = new_terms;
+    options_.output_digits = output_digits;
+
+    try {
+        if (options_.progress_callback) {
+            completed_terms_.store(0, std::memory_order_relaxed);
+            overall_progress_.store(0.0, std::memory_order_relaxed);
+            report_progress(0.0);
+        }
+
+        auto start = std::chrono::steady_clock::now();
+
+        SplitResult merged;
+        if (previous.terms == 0) {
+            // Identity state: compute the whole interval directly.
+            merged = binary_split(0, new_terms);
+        } else {
+            SplitResult interval = binary_split(previous.terms, new_terms);
+            SplitResult prev_split{previous.P, previous.Q, previous.T};
+            merged = merge(prev_split, interval);
+        }
+
+        auto pi = finalize_pi(merged, start);
+        if (!pi) {
+            return pi.error();
+        }
+
+        ChudnovskyState next_state;
+        next_state.P = std::move(merged.P);
+        next_state.Q = std::move(merged.Q);
+        next_state.T = std::move(merged.T);
+        next_state.terms = new_terms;
+
+        return std::pair<PiValue, ChudnovskyState>{
+            std::move(*pi), std::move(next_state)};
     } catch (const std::bad_alloc&) {
         return ComputeError::OutOfMemory;
     }

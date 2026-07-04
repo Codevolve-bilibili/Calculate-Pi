@@ -25,6 +25,12 @@ enum class Language {
     Chinese,
 };
 
+enum class TimeUnit {
+    Seconds,
+    Minutes,
+    Hours,
+};
+
 struct ComputeOptions {
     uint64_t terms = 0;
     std::optional<std::filesystem::path> output_path;
@@ -35,6 +41,12 @@ struct ComputeOptions {
     bool last_digit_easter_egg = false;
     std::optional<size_t> thread_count;
     std::optional<uint64_t> max_memory_mb;
+
+    // Infinite computation mode.
+    bool infinite = false;
+    uint64_t step = 0;
+    std::optional<uint64_t> infinite_max_files;
+    std::optional<uint64_t> infinite_max_time_seconds;
 };
 
 struct CliResult {
@@ -53,6 +65,15 @@ enum class CliError {
     InvalidThreadCount,
     InvalidMemoryLimit,
     InvalidLanguage,
+    InvalidStepFormat,
+    StepOutOfRange,
+    InvalidInfiniteMaxFiles,
+    InvalidInfiniteMaxTime,
+    InvalidInfiniteTimeUnit,
+    InfiniteRequiresStep,
+    InfiniteRequiresOutput,
+    InfiniteNotAllowedWithInteractive,
+    InfiniteNotAllowedWithLastDigit,
 };
 
 [[nodiscard]] expected<uint64_t, CliError> parse_terms(std::string_view s);
@@ -61,6 +82,10 @@ enum class CliError {
 [[nodiscard]] expected<uint64_t, CliError> parse_memory_mb(std::string_view s);
 [[nodiscard]] expected<size_t, CliError> parse_thread_count(std::string_view s);
 [[nodiscard]] std::optional<Language> parse_language(std::string_view s);
+[[nodiscard]] expected<uint64_t, CliError> parse_step(std::string_view s);
+[[nodiscard]] expected<uint64_t, CliError> parse_max_files(std::string_view s);
+[[nodiscard]] expected<uint64_t, CliError> parse_max_time(std::string_view s);
+[[nodiscard]] std::optional<TimeUnit> parse_time_unit(std::string_view s);
 
 expected<CliResult, CliError> parse_cli(int argc, const char* argv[]);
 std::string to_string(CliError error, Language lang = Language::Chinese);

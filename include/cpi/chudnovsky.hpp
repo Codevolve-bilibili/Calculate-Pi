@@ -8,11 +8,13 @@
 #include "cpi/expected.hpp"
 
 #include <atomic>
+#include <chrono>
 #include <cstdint>
 #include <functional>
 #include <memory>
 #include <mutex>
 #include <string>
+#include <utility>
 
 namespace cpi {
 
@@ -41,6 +43,16 @@ struct PiValue {
     uint64_t elapsed_ms;
 };
 
+// Holds the merged binary-split state P(0,terms), Q(0,terms), T(0,terms).
+// This can be reused across incremental computations to avoid recomputing the
+// entire series from scratch.
+struct ChudnovskyState {
+    BigInt P;
+    BigInt Q;
+    BigInt T;
+    uint64_t terms = 0;
+};
+
 enum class ComputeError {
     InvalidTerms,
     InsufficientPrecision,
@@ -56,6 +68,13 @@ public:
 
     [[nodiscard]] expected<PiValue, ComputeError> compute();
 
+    // Compute pi for new_terms by extending a previously computed state.
+    // Returns both the pi value and the new merged state for the next call.
+    [[nodiscard]] expected<std::pair<PiValue, ChudnovskyState>, ComputeError>
+    compute_incremental(uint64_t new_terms,
+                        uint64_t output_digits,
+                        const ChudnovskyState& previous);
+
 private:
     struct SplitResult {
         BigInt P;
@@ -68,6 +87,11 @@ private:
     [[nodiscard]] SplitResult merge(
         const SplitResult& left, const SplitResult& right);
     void report_progress(double p);
+
+    // Shared finalization: sqrt(10005) at the current scale, then C_s*Q/T.
+    [[nodiscard]] expected<PiValue, ComputeError> finalize_pi(
+        const SplitResult& result,
+        std::chrono::steady_clock::time_point start);
 
     ChudnovskyOptions options_;
     std::shared_ptr<ThreadPool> pool_;
