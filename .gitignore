@@ -3,6 +3,9 @@ build/
 cmake-build-*/
 out/
 
+# Release distribution directory
+release/
+
 # Python files
 assets/*.py
 res/*.py
