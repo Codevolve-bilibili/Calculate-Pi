@@ -1,5 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="760" height="500" viewBox="0 0 760 500" role="img" aria-label="calculate_pi --help（中文）">
-  <rect width="760" height="500" rx="8" ry="8" fill="#1e1e1e" />
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="620" viewBox="0 0 760 620" role="img" aria-label="calculate_pi --help（中文）">
+  <rect width="760" height="620" rx="8" ry="8" fill="#1e1e1e" />
   <rect width="760" height="28" rx="8" ry="8" fill="#2d2d2d" />
   <text x="380" y="19.0" fill="#cccccc" font-family="sans-serif" font-size="12" text-anchor="middle">calculate_pi --help</text>
   <text x="16" y="44" fill="#4ec9b0" font-family="Consolas, Monaco, 'Courier New', monospace" font-size="14" xml:space="preserve">$ ./build/calculate_pi --help</text>
@@ -8,21 +8,27 @@
   <text x="16" y="104" fill="#d4d4d4" font-family="Consolas, Monaco, 'Courier New', monospace" font-size="14" xml:space="preserve">用法:</text>
   <text x="16" y="124" fill="#d4d4d4" font-family="Consolas, Monaco, 'Courier New', monospace" font-size="14" xml:space="preserve">  CalculatePi [选项]</text>
   <text x="16" y="144" fill="#d4d4d4" font-family="Consolas, Monaco, 'Courier New', monospace" font-size="14" xml:space="preserve">  CalculatePi --terms &lt;N&gt; [-o &lt;路径&gt;] [--stats]</text>
-  <text x="16" y="164" fill="#d4d4d4" font-family="Consolas, Monaco, 'Courier New', monospace" font-size="14" xml:space="preserve">  CalculatePi --interactive [选项]</text>
-  <text x="16" y="184" fill="#d4d4d4" font-family="Consolas, Monaco, 'Courier New', monospace" font-size="14" xml:space="preserve"></text>
-  <text x="16" y="204" fill="#d4d4d4" font-family="Consolas, Monaco, 'Courier New', monospace" font-size="14" xml:space="preserve">选项:</text>
-  <text x="16" y="224" fill="#d4d4d4" font-family="Consolas, Monaco, 'Courier New', monospace" font-size="14" xml:space="preserve">  -n, --terms &lt;N&gt;      楚德诺夫斯基级数项数（命令行模式下必需）</text>
-  <text x="16" y="244" fill="#d4d4d4" font-family="Consolas, Monaco, 'Courier New', monospace" font-size="14" xml:space="preserve">  -o, --output &lt;路径&gt;  将结果写入指定文件</text>
-  <text x="16" y="264" fill="#d4d4d4" font-family="Consolas, Monaco, 'Courier New', monospace" font-size="14" xml:space="preserve">      --stats          显示额外统计信息</text>
-  <text x="16" y="284" fill="#d4d4d4" font-family="Consolas, Monaco, 'Courier New', monospace" font-size="14" xml:space="preserve">  -q, --quiet          不在控制台打印完整 π 字符串</text>
-  <text x="16" y="304" fill="#d4d4d4" font-family="Consolas, Monaco, 'Courier New', monospace" font-size="14" xml:space="preserve">  -t, --threads &lt;N&gt;    工作线程数（0 = 硬件并发数）</text>
-  <text x="16" y="324" fill="#d4d4d4" font-family="Consolas, Monaco, 'Courier New', monospace" font-size="14" xml:space="preserve">  -e, --eco            使用更少线程以降低 CPU 负载</text>
-  <text x="16" y="344" fill="#d4d4d4" font-family="Consolas, Monaco, 'Courier New', monospace" font-size="14" xml:space="preserve">  -m, --max-memory-mb  计算允许使用的最大内存（MB）</text>
-  <text x="16" y="364" fill="#d4d4d4" font-family="Consolas, Monaco, 'Courier New', monospace" font-size="14" xml:space="preserve">  -f, --force          跳过内存安全检查</text>
-  <text x="16" y="384" fill="#d4d4d4" font-family="Consolas, Monaco, 'Courier New', monospace" font-size="14" xml:space="preserve">      --last-digit     说明 π 没有最后一位</text>
-  <text x="16" y="404" fill="#d4d4d4" font-family="Consolas, Monaco, 'Courier New', monospace" font-size="14" xml:space="preserve">  -l, --lang &lt;语言&gt;    界面语言：en/english/英文 或 zh/chinese/中文</text>
-  <text x="16" y="424" fill="#d4d4d4" font-family="Consolas, Monaco, 'Courier New', monospace" font-size="14" xml:space="preserve">  -i, --interactive    进入交互模式（将其他标志作为默认值）</text>
-  <text x="16" y="444" fill="#d4d4d4" font-family="Consolas, Monaco, 'Courier New', monospace" font-size="14" xml:space="preserve">  -h, --help           显示此帮助信息</text>
-  <text x="16" y="464" fill="#d4d4d4" font-family="Consolas, Monaco, 'Courier New', monospace" font-size="14" xml:space="preserve"></text>
-  <text x="16" y="484" fill="#d4d4d4" font-family="Consolas, Monaco, 'Courier New', monospace" font-size="14" xml:space="preserve">若未提供任何参数，程序将进入交互模式。</text>
+  <text x="16" y="164" fill="#d4d4d4" font-family="Consolas, Monaco, 'Courier New', monospace" font-size="14" xml:space="preserve">  CalculatePi --infinite --terms &lt;N&gt; --step &lt;S&gt; --output &lt;目录&gt; [选项]</text>
+  <text x="16" y="184" fill="#d4d4d4" font-family="Consolas, Monaco, 'Courier New', monospace" font-size="14" xml:space="preserve">  CalculatePi --interactive [选项]</text>
+  <text x="16" y="204" fill="#d4d4d4" font-family="Consolas, Monaco, 'Courier New', monospace" font-size="14" xml:space="preserve"></text>
+  <text x="16" y="224" fill="#d4d4d4" font-family="Consolas, Monaco, 'Courier New', monospace" font-size="14" xml:space="preserve">选项:</text>
+  <text x="16" y="244" fill="#d4d4d4" font-family="Consolas, Monaco, 'Courier New', monospace" font-size="14" xml:space="preserve">  -n, --terms &lt;N&gt;      楚德诺夫斯基级数项数（命令行模式下必需）</text>
+  <text x="16" y="264" fill="#d4d4d4" font-family="Consolas, Monaco, 'Courier New', monospace" font-size="14" xml:space="preserve">  -o, --output &lt;路径&gt;  将结果写入指定文件或目录</text>
+  <text x="16" y="284" fill="#d4d4d4" font-family="Consolas, Monaco, 'Courier New', monospace" font-size="14" xml:space="preserve">      --stats          显示额外统计信息</text>
+  <text x="16" y="304" fill="#d4d4d4" font-family="Consolas, Monaco, 'Courier New', monospace" font-size="14" xml:space="preserve">  -q, --quiet          不在控制台打印完整 π 字符串</text>
+  <text x="16" y="324" fill="#d4d4d4" font-family="Consolas, Monaco, 'Courier New', monospace" font-size="14" xml:space="preserve">  -t, --threads &lt;N&gt;    工作线程数（0 = 硬件并发数）</text>
+  <text x="16" y="344" fill="#d4d4d4" font-family="Consolas, Monaco, 'Courier New', monospace" font-size="14" xml:space="preserve">  -e, --eco            使用更少线程以降低 CPU 负载</text>
+  <text x="16" y="364" fill="#d4d4d4" font-family="Consolas, Monaco, 'Courier New', monospace" font-size="14" xml:space="preserve">  -m, --max-memory-mb  计算允许使用的最大内存（MB）</text>
+  <text x="16" y="384" fill="#d4d4d4" font-family="Consolas, Monaco, 'Courier New', monospace" font-size="14" xml:space="preserve">  -f, --force          跳过内存安全检查</text>
+  <text x="16" y="404" fill="#d4d4d4" font-family="Consolas, Monaco, 'Courier New', monospace" font-size="14" xml:space="preserve">      --last-digit     说明 π 没有最后一位</text>
+  <text x="16" y="424" fill="#d4d4d4" font-family="Consolas, Monaco, 'Courier New', monospace" font-size="14" xml:space="preserve">      --infinite       启用无限计算模式（CLI 专用）</text>
+  <text x="16" y="444" fill="#d4d4d4" font-family="Consolas, Monaco, 'Courier New', monospace" font-size="14" xml:space="preserve">      --step &lt;N&gt;       无限模式下每次增加的项数</text>
+  <text x="16" y="464" fill="#d4d4d4" font-family="Consolas, Monaco, 'Courier New', monospace" font-size="14" xml:space="preserve">      --infinite-max-files &lt;N&gt; 最多生成 N 个文件</text>
+  <text x="16" y="484" fill="#d4d4d4" font-family="Consolas, Monaco, 'Courier New', monospace" font-size="14" xml:space="preserve">      --infinite-max-time &lt;N&gt;  最长运行时间</text>
+  <text x="16" y="504" fill="#d4d4d4" font-family="Consolas, Monaco, 'Courier New', monospace" font-size="14" xml:space="preserve">      --infinite-max-time-unit &lt;s/m/h&gt; 时间单位（默认秒）</text>
+  <text x="16" y="524" fill="#d4d4d4" font-family="Consolas, Monaco, 'Courier New', monospace" font-size="14" xml:space="preserve">  -l, --lang &lt;语言&gt;    界面语言：en/english/英文 或 zh/chinese/中文</text>
+  <text x="16" y="544" fill="#d4d4d4" font-family="Consolas, Monaco, 'Courier New', monospace" font-size="14" xml:space="preserve">  -i, --interactive    进入交互模式（将其他标志作为默认值）</text>
+  <text x="16" y="564" fill="#d4d4d4" font-family="Consolas, Monaco, 'Courier New', monospace" font-size="14" xml:space="preserve">  -h, --help           显示此帮助信息</text>
+  <text x="16" y="584" fill="#d4d4d4" font-family="Consolas, Monaco, 'Courier New', monospace" font-size="14" xml:space="preserve"></text>
+  <text x="16" y="604" fill="#d4d4d4" font-family="Consolas, Monaco, 'Courier New', monospace" font-size="14" xml:space="preserve">若未提供任何参数，程序将进入交互模式。</text>
 </svg>
