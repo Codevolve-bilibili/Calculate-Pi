@@ -1,5 +1,5 @@
 # Build directories
-build/
+build*/
 cmake-build-*/
 out/
 
@@ -15,6 +15,8 @@ error*.md
 
 # Running Cache
 assets/*.txt
+*.txt
+*.log
 
 # CMake generated files
 CMakeCache.txt

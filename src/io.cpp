@@ -31,10 +31,6 @@ BigInt round_scaled_pi(const BigInt& scaled_pi, uint64_t guard_digits) {
     return rounded;
 }
 
-} // namespace
-
-namespace {
-
 std::string trim_string(const std::string& s) {
     size_t start = 0;
     while (start < s.size() &&
@@ -73,28 +69,91 @@ expected<bool, IOError> read_yes_no(const std::string& prompt,
 
 } // namespace
 
+namespace detail {
+
+BigInt round_scaled_pi(const BigInt& scaled_pi, uint64_t guard_digits) {
+    return ::cpi::round_scaled_pi(scaled_pi, guard_digits);
+}
+
+} // namespace detail
+
+// -----------------------------------------------------------------------------
+// Built-in sinks
+// -----------------------------------------------------------------------------
+
+OstreamSink::OstreamSink(std::ostream& os) : os_(os) {}
+
+void OstreamSink::write(std::string_view data) {
+    if (!os_.good()) return;
+    os_.write(data.data(), static_cast<std::streamsize>(data.size()));
+    os_.flush();
+}
+
+bool OstreamSink::good() const {
+    return os_.good();
+}
+
+FileSink::FileSink(const std::filesystem::path& path) {
+    try {
+        if (path.string().size() > std::numeric_limits<size_t>::max() / 2) {
+            error_ = IOError::PathTooLong;
+            return;
+        }
+        file_.open(path, std::ios::out | std::ios::trunc | std::ios::binary);
+        if (!file_.is_open()) {
+            error_ = IOError::FileNotWritable;
+        }
+    } catch (const std::filesystem::filesystem_error&) {
+        error_ = IOError::PathInvalid;
+    } catch (const std::exception&) {
+        error_ = IOError::FileNotWritable;
+    }
+}
+
+void FileSink::write(std::string_view data) {
+    if (!file_.is_open() || !file_.good()) return;
+    file_.write(data.data(), static_cast<std::streamsize>(data.size()));
+    file_.flush();
+    if (!file_.good() && error_ == IOError::FileNotWritable) {
+        // Keep the first recorded error.
+    }
+}
+
+bool FileSink::good() const {
+    return file_.is_open() && file_.good();
+}
+
+IOError FileSink::error() const {
+    if (file_.is_open() && !file_.good()) {
+        return IOError::FileNotWritable;
+    }
+    return error_;
+}
+
+// -----------------------------------------------------------------------------
+// Formatting helpers
+// -----------------------------------------------------------------------------
+
+namespace {
+
+class StringSink {
+public:
+    void write(std::string_view data) { buffer_ += data; }
+    [[nodiscard]] bool good() const { return true; }
+    [[nodiscard]] std::string& buffer() { return buffer_; }
+
+private:
+    std::string buffer_;
+};
+
+} // namespace
+
 std::string format_pi(const BigInt& scaled_pi, uint64_t output_digits,
                       uint64_t guard_digits) {
-    BigInt rounded = round_scaled_pi(scaled_pi, guard_digits);
-    std::string s = rounded.to_string();
-
-    // scaled_pi is positive and roughly pi * 10^(D+G), so the integer
-    // representation has D+G+1 digits (the leading 3 plus D+G decimals).
-    // After rounding to D digits, the integer should have D+1 digits.
-    if (s.size() < output_digits + 1) {
-        s = std::string(output_digits + 1 - s.size(), '0') + s;
-    } else if (s.size() > output_digits + 1) {
-        // Rounding caused an extra digit (e.g. 3.999... rounded to 4.000...).
-        // Keep output_digits digits after the decimal point by dropping the
-        // least significant digit.
-        s.pop_back();
-    }
-
-    // Insert decimal point after the first digit.
-    if (s.size() > 1) {
-        s.insert(1, 1, '.');
-    }
-    return s;
+    StringSink sink;
+    auto res = stream_pi(scaled_pi, output_digits, guard_digits, sink);
+    static_cast<void>(res); // StringSink never fails.
+    return std::move(sink.buffer());
 }
 
 std::string format_stats(const ConsoleOutput& output, Language lang) {
@@ -109,37 +168,6 @@ std::string format_stats(const ConsoleOutput& output, Language lang) {
             << "Time: " << output.elapsed_ms << " ms\n";
     }
     return oss.str();
-}
-
-expected<void, IOError> write_text_file(const std::filesystem::path& path,
-                                           std::string_view content,
-                                           bool overwrite) {
-    try {
-        if (path.string().size() > std::numeric_limits<size_t>::max() / 2) {
-            return IOError::PathTooLong;
-        }
-
-        std::ios_base::openmode mode = std::ios::out | std::ios::trunc;
-        if (!overwrite) {
-            mode = std::ios::out | std::ios::app;
-        }
-
-        std::ofstream file(path, mode);
-        if (!file.is_open()) {
-            return IOError::FileNotWritable;
-        }
-
-        file.write(content.data(), static_cast<std::streamsize>(content.size()));
-        if (!file.good()) {
-            return IOError::FileNotWritable;
-        }
-
-        return {};
-    } catch (const std::filesystem::filesystem_error&) {
-        return IOError::PathInvalid;
-    } catch (const std::exception&) {
-        return IOError::FileNotWritable;
-    }
 }
 
 expected<ComputeOptions, IOError> read_interactive_options(
@@ -280,15 +308,6 @@ expected<ComputeOptions, IOError> read_interactive_options(
     }
 
     return options;
-}
-
-void print_to_console(const ConsoleOutput& output, bool show_stats,
-                      Language lang, std::ostream& os) {
-    os << output.pi_formatted;
-    if (show_stats) {
-        os << "\n" << format_stats(output, lang);
-    }
-    os << "\n";
 }
 
 std::string to_string(IOError error, Language lang) {

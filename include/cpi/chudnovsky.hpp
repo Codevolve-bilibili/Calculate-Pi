@@ -7,8 +7,11 @@
 #include "cpi/concurrency.hpp"
 #include "cpi/expected.hpp"
 
+#include <atomic>
 #include <cstdint>
+#include <functional>
 #include <memory>
+#include <mutex>
 #include <string>
 
 namespace cpi {
@@ -25,6 +28,10 @@ struct ChudnovskyOptions {
     uint64_t terms;           // Number of series terms N.
     uint64_t output_digits;   // Target decimal digits D.
     uint64_t guard_digits = 5; // Guard digits G for rounding error absorption.
+
+    // Optional progress callback; argument is in [0, 1].
+    std::function<void(double)> progress_callback;
+    uint64_t progress_interval_ms = 50;
 };
 
 struct PiValue {
@@ -60,10 +67,14 @@ private:
     [[nodiscard]] SplitResult binary_split_serial(uint64_t a, uint64_t b);
     [[nodiscard]] SplitResult merge(
         const SplitResult& left, const SplitResult& right);
+    void report_progress(double p);
 
     ChudnovskyOptions options_;
     std::shared_ptr<ThreadPool> pool_;
     uint64_t parallel_threshold_ = 64;
+    std::atomic<uint64_t> completed_terms_{0};
+    std::atomic<double> overall_progress_{0.0};
+    std::mutex progress_mutex_;
 };
 
 [[nodiscard]] std::string to_string(ComputeError error);

@@ -7,6 +7,7 @@
 
 #include <compare>
 #include <cstdint>
+#include <functional>
 #include <iostream>
 #include <memory>
 #include <string>
@@ -146,6 +147,14 @@ public:
     [[nodiscard]] static BigInt pow(const BigInt& base, uint64_t exp);
     [[nodiscard]] static BigInt factorial(uint64_t n);
     [[nodiscard]] static expected<BigInt, BigIntError> sqrt(const BigInt& n);
+    [[nodiscard]] static expected<BigInt, BigIntError> sqrt(
+        const BigInt& n,
+        const std::function<void(double)>& progress_callback);
+
+    // Division with progress callback. operator/ remains callback-free.
+    [[nodiscard]] expected<BigInt, BigIntError> divide(
+        const BigInt& divisor,
+        const std::function<void(double)>& progress_callback) const;
 
     // Bit shifts (only positive shift counts are valid; negative is undefined).
     [[nodiscard]] BigInt operator<<(uint64_t shift) const;
@@ -154,6 +163,11 @@ public:
     // Conversion
     [[nodiscard]] std::string to_string() const;
     [[nodiscard]] std::string to_string_radix(int radix) const;
+
+    // Stream exactly `digits` decimal digits of the absolute value, padding with
+    // leading zeros. Emits chunks from most-significant to least-significant.
+    void stream_decimal_fixed(uint64_t digits,
+                              std::function<void(std::string_view)> sink) const;
 
     // Multiply strategy injection (primarily for testing).
     static void set_default_multiplier(std::shared_ptr<MultiplicationStrategy> strategy);

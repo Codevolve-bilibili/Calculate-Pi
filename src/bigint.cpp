@@ -8,6 +8,7 @@
 #include <cassert>
 #include <cmath>
 #include <complex>
+#include <cstdio>
 #include <cstdlib>
 #include <limits>
 #include <sstream>
@@ -368,8 +369,12 @@ BigInt BigInt::operator>>(uint64_t shift) const {
 // Long division: returns {quotient, remainder} for magnitudes, |this| / |rhs|.
 // Implements Knuth's Algorithm D with explicit (n+1)-digit product handling.
 // Assumes rhs is non-zero.
-static std::pair<BigInt, BigInt> divide_magnitude(const BigInt& dividend, const BigInt& divisor) {
+static std::pair<BigInt, BigInt> divide_magnitude(
+    const BigInt& dividend,
+    const BigInt& divisor,
+    const std::function<void(double)>& progress_callback = {}) {
     if (dividend.compare_magnitude(divisor) < 0) {
+        if (progress_callback) progress_callback(1.0);
         return {BigInt(), dividend};
     }
 
@@ -410,6 +415,7 @@ static std::pair<BigInt, BigInt> divide_magnitude(const BigInt& dividend, const 
     uint64_t v_next = (n >= 2) ? vn[n - 2] : 0;
 
     std::vector<uint64_t> prod(n + 1);
+    const size_t total_quotient_limbs = m + 1;
     for (size_t j = m + 1; j-- > 0;) {
         // Estimate quotient digit.
         uint64_t u_top = (static_cast<uint64_t>(un[j + n]) << 32) | un[j + n - 1];
@@ -458,6 +464,12 @@ static std::pair<BigInt, BigInt> divide_magnitude(const BigInt& dividend, const 
         }
 
         q[j] = static_cast<uint32_t>(qhat);
+
+        if (progress_callback) {
+            double local = static_cast<double>(total_quotient_limbs - j)
+                           / static_cast<double>(total_quotient_limbs);
+            progress_callback(local);
+        }
     }
 
     BigInt quotient(Sign::Positive, std::move(q));
@@ -488,6 +500,19 @@ expected<BigInt, BigIntError> BigInt::operator/(const BigInt& rhs) const {
     if (is_zero()) return BigInt();
 
     auto [quot, rem] = divide_magnitude(this->abs(), rhs.abs());
+    if (!quot.is_zero()) {
+        quot.sign_ = (sign_ == rhs.sign_) ? Sign::Positive : Sign::Negative;
+    }
+    return quot;
+}
+
+expected<BigInt, BigIntError> BigInt::divide(
+    const BigInt& rhs,
+    const std::function<void(double)>& progress_callback) const {
+    if (rhs.is_zero()) return BigIntError::DivisionByZero;
+    if (is_zero()) return BigInt();
+
+    auto [quot, rem] = divide_magnitude(this->abs(), rhs.abs(), progress_callback);
     if (!quot.is_zero()) {
         quot.sign_ = (sign_ == rhs.sign_) ? Sign::Positive : Sign::Negative;
     }
@@ -551,8 +576,19 @@ BigInt BigInt::factorial(uint64_t n) {
 // Integer square root using Newton's method for the reciprocal square root.
 // ---------------------------------------------------------------------------
 expected<BigInt, BigIntError> BigInt::sqrt(const BigInt& n) {
+    return sqrt(n, {});
+}
+
+expected<BigInt, BigIntError> BigInt::sqrt(
+    const BigInt& n,
+    const std::function<void(double)>& progress_callback) {
+    auto report = [&](double local) {
+        if (progress_callback) progress_callback(local);
+    };
+
+    report(0.0);
     if (n.is_negative()) return BigIntError::NegativeSqrt;
-    if (n.is_zero() || n == BigInt(1)) return n;
+    if (n.is_zero() || n == BigInt(1)) { report(1.0); return n; }
 
     // For small values, compute directly using 64-bit floating point.
     if (n.limbs().size() <= 2) {
@@ -571,6 +607,7 @@ expected<BigInt, BigIntError> BigInt::sqrt(const BigInt& n) {
         while (r > 0 && r * r > v) {
             --r;
         }
+        report(1.0);
         return BigInt(static_cast<int64_t>(r));
     }
 
@@ -597,6 +634,7 @@ expected<BigInt, BigIntError> BigInt::sqrt(const BigInt& n) {
     // This doubles the number of correct bits each iteration.
     BigInt Y_next;
     for (int iter = 0; iter < 64; ++iter) {
+        report(static_cast<double>(iter) / 64.0);
         BigInt Y2 = Y * Y;
         BigInt NY2 = n * Y2;
         BigInt diff = three_two_2p - NY2;
@@ -608,6 +646,7 @@ expected<BigInt, BigIntError> BigInt::sqrt(const BigInt& n) {
         if (Y_next == Y) break;
         Y = std::move(Y_next);
     }
+    report(1.0);
 
     // S = floor(N * Y / 2^p)
     BigInt S = (n * Y) >> p;
@@ -639,6 +678,22 @@ expected<BigInt, BigIntError> BigInt::sqrt(const BigInt& n) {
 // Decimal string conversion
 // ---------------------------------------------------------------------------
 namespace {
+
+// Thread-local cache of powers of 10^9: pow10[k] = 10^(9 * 2^k).
+// Each thread owns its cache to avoid races between to_string() and streaming.
+std::vector<BigInt>& thread_local_pow10_cache() {
+    static thread_local std::vector<BigInt> cache = { BigInt(1'000'000'000) };
+    return cache;
+}
+
+void ensure_pow10_cache_for_digits(uint64_t digits) {
+    auto& cache = thread_local_pow10_cache();
+    uint64_t current_exp = 9ULL << (cache.size() - 1);
+    while (current_exp < digits) {
+        cache.push_back(cache.back() * cache.back());
+        current_exp <<= 1;
+    }
+}
 
 std::string to_string_recursive(const BigInt& x, size_t k,
                                 const std::vector<BigInt>& pow10) {
@@ -683,14 +738,59 @@ std::string to_string_recursive(const BigInt& x, size_t k,
     return high + low;
 }
 
+uint64_t extract_uint64(const BigInt& x) {
+    const auto& limbs = x.limbs();
+    if (limbs.empty()) return 0;
+    uint64_t value = limbs[0];
+    if (limbs.size() > 1) {
+        value |= static_cast<uint64_t>(limbs[1]) << 32;
+    }
+    return value;
+}
+
+// Stream exactly `digits` decimal digits of x (x < 10^digits), padding with
+// leading zeros. Emits chunks from most-significant to least-significant.
+void stream_decimal_fixed_impl(const BigInt& x, uint64_t digits,
+                               const std::function<void(std::string_view)>& sink) {
+    if (digits == 0) return;
+    if (digits <= 9) {
+        uint64_t value = extract_uint64(x);
+        char buf[16];
+        std::snprintf(buf, sizeof(buf), "%0*llu",
+                      static_cast<int>(digits), value);
+        sink(buf);
+        return;
+    }
+
+    ensure_pow10_cache_for_digits(digits);
+    const auto& cache = thread_local_pow10_cache();
+
+    // Choose the largest power of ten strictly less than `digits` so that both
+    // the high and low parts shrink on each recursion.
+    size_t k = cache.size() - 1;
+    while (k > 0 && (9ULL << k) >= digits) {
+        --k;
+    }
+
+    uint64_t low_digits = 9ULL << k;
+    uint64_t high_digits = digits - low_digits;
+    const BigInt& divisor = cache[k];
+    auto q_res = x / divisor;
+    auto r_res = x % divisor;
+
+    if (high_digits > 0) {
+        stream_decimal_fixed_impl(*q_res, high_digits, sink);
+    }
+    stream_decimal_fixed_impl(*r_res, low_digits, sink);
+}
+
 } // namespace
 
 std::string BigInt::to_string() const {
     if (is_zero()) return "0";
 
-    // Precompute powers of 10^9: pow10[k] = 10^(9 * 2^k).
-    // Use a static cache so repeated calls reuse the work.
-    static std::vector<BigInt> pow10_cache = { BigInt(1'000'000'000) };
+    ensure_pow10_cache_for_digits(9);
+    auto& pow10_cache = thread_local_pow10_cache();
     {
         BigInt limit = abs();
         // Ensure the cache contains a power strictly larger than |this|.
@@ -708,6 +808,12 @@ std::string BigInt::to_string() const {
     std::string s = to_string_recursive(abs(), k, pow10_cache);
     if (sign_ == Sign::Negative) s = "-" + s;
     return s;
+}
+
+void BigInt::stream_decimal_fixed(
+    uint64_t digits, std::function<void(std::string_view)> sink) const {
+    if (digits == 0) return;
+    stream_decimal_fixed_impl(abs(), digits, std::move(sink));
 }
 
 // ---------------------------------------------------------------------------

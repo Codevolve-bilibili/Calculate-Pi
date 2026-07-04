@@ -53,7 +53,9 @@ if(WIN32)
     # Tell the resource compiler that the .rc file is UTF-8 so that
     # Chinese characters in version strings are preserved.
     if(CMAKE_RC_COMPILER MATCHES "windres")
-        set(CMAKE_RC_FLAGS "${CMAKE_RC_FLAGS} --codepage=65001")
+        # MSYS2 windres needs an explicit preprocessor and -DRC_INVOKED so that
+        # windows.h skips inline assembly/intrinsics that windres cannot parse.
+        set(CMAKE_RC_FLAGS "${CMAKE_RC_FLAGS} -c 65001 --use-temp-file --preprocessor clang --preprocessor-arg=-E --preprocessor-arg=-xc --preprocessor-arg=-DRC_INVOKED")
     else()
         set(CMAKE_RC_FLAGS "${CMAKE_RC_FLAGS} /c 65001")
     endif()

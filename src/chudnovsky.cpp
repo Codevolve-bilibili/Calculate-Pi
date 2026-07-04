@@ -63,31 +63,44 @@ expected<PiValue, ComputeError> ChudnovskyCalculator::compute() {
     const uint64_t scale_digits = options_.output_digits + guard;
 
     try {
+        if (options_.progress_callback) {
+            completed_terms_.store(0, std::memory_order_relaxed);
+            overall_progress_.store(0.0, std::memory_order_relaxed);
+            report_progress(0.0);
+        }
+
+        auto start = std::chrono::steady_clock::now();
+
         // S = floor(sqrt(10005) * 10^scale_digits).
         // Compute as floor(sqrt(10005 * 10^(2*scale_digits))).
         BigInt ten(10);
         BigInt pow10_2m = BigInt::pow(ten, 2 * scale_digits);
         BigInt scaled_kd = BigInt(kD) * pow10_2m;
-        BigInt S = BigInt::sqrt(scaled_kd).value();
+        BigInt S = BigInt::sqrt(
+            scaled_kd,
+            [this](double local) { report_progress(0.05 * local); }).value();
 
         // C_s = 426880 * S.
         BigInt C_s = BigInt(kC) * S;
 
-        auto start = std::chrono::steady_clock::now();
         SplitResult result = binary_split(0, options_.terms);
-        auto elapsed = std::chrono::steady_clock::now() - start;
-        uint64_t elapsed_ms = static_cast<uint64_t>(
-            std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count());
+        report_progress(0.15);
 
         if (result.T.is_zero()) {
             return ComputeError::DivisionByZero;
         }
 
         BigInt numerator = C_s * result.Q;
-        auto div_result = numerator / result.T;
+        auto div_result = numerator.divide(
+            result.T,
+            [this](double local) { report_progress(0.15 + 0.05 * local); });
         if (!div_result) {
             return ComputeError::DivisionByZero;
         }
+
+        auto elapsed = std::chrono::steady_clock::now() - start;
+        uint64_t elapsed_ms = static_cast<uint64_t>(
+            std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count());
 
         PiValue value;
         value.scaled_pi = std::move(*div_result);
@@ -140,6 +153,15 @@ ChudnovskyCalculator::binary_split_serial(uint64_t a, uint64_t b) {
         int64_t coeff = kA + kB * static_cast<int64_t>(a);
         BigInt T = BigInt(coeff) * base_q;
 
+        uint64_t completed = ++completed_terms_;
+        double local = static_cast<double>(completed)
+                       / static_cast<double>(options_.terms);
+        double p = 0.05 + 0.10 * local;
+        if (p > 0.15) {
+            p = 0.15;
+        }
+        report_progress(p);
+
         return {std::move(P), std::move(base_q), std::move(T)};
     }
 
@@ -160,6 +182,20 @@ ChudnovskyCalculator::merge(
     // T(a,b) = T(a,m) * Q(m,b) + P(a,m) * T(m,b)
     result.T = left.T * right.Q + left.P * right.T;
     return result;
+}
+
+void ChudnovskyCalculator::report_progress(double p) {
+    if (p < 0.0) p = 0.0;
+    if (p > 1.0) p = 1.0;
+    overall_progress_.store(p, std::memory_order_relaxed);
+    if (options_.progress_callback) {
+        std::lock_guard<std::mutex> lock(progress_mutex_);
+        try {
+            options_.progress_callback(p);
+        } catch (...) {
+            // Ignore callback exceptions so computation continues.
+        }
+    }
 }
 
 std::string to_string(ComputeError error) {

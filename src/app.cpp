@@ -8,10 +8,13 @@
 #include "cpi/io.hpp"
 #include "cpi/sysinfo.hpp"
 
+#include <algorithm>
 #include <filesystem>
+#include <functional>
 #include <iomanip>
 #include <iostream>
 #include <limits>
+#include <memory>
 #include <sstream>
 #include <thread>
 
@@ -233,7 +236,35 @@ int Application::run_compute(const ComputeOptions& options, Language lang) {
         }
     }
 
-    ChudnovskyOptions chud_opts{options.terms, output_digits, guard_digits};
+    ChudnovskyOptions chud_opts;
+    chud_opts.terms = options.terms;
+    chud_opts.output_digits = output_digits;
+    chud_opts.guard_digits = guard_digits;
+    struct ProgressState {
+        double last_p = -1.0;
+        std::string last_text;
+    };
+
+    std::function<void(double)> progress_callback = [lang,
+                                                   state = std::make_shared<ProgressState>()](double p) {
+        if (p <= state->last_p) {
+            return;
+        }
+        state->last_p = p;
+
+        std::ostringstream oss;
+        oss << (lang == Language::Chinese ? "计算进度: " : "Progress: ")
+            << std::fixed << std::setprecision(2) << (p * 100.0) << '%';
+        std::string text = oss.str();
+        if (text == state->last_text) {
+            return;
+        }
+        state->last_text = text;
+        // Pad with spaces to erase any leftover characters from a longer
+        // previous progress line (e.g. 100.00% followed by 4.76%).
+        std::cerr << '\r' << text << std::string(20, ' ') << std::flush;
+    };
+    chud_opts.progress_callback = progress_callback;
 
     // Determine thread count.
     size_t num_threads = options.thread_count.value_or(0);
@@ -258,14 +289,10 @@ int Application::run_compute(const ComputeOptions& options, Language lang) {
         return 1;
     }
 
-    std::string formatted = format_pi(result->scaled_pi, output_digits,
-                                      result->guard_digits);
-
-    ConsoleOutput console_output;
-    console_output.pi_formatted = formatted;
-    console_output.terms = options.terms;
-    console_output.decimal_digits = output_digits;
-    console_output.elapsed_ms = result->elapsed_ms;
+    ConsoleOutput stats;
+    stats.terms = options.terms;
+    stats.decimal_digits = output_digits;
+    stats.elapsed_ms = result->elapsed_ms;
 
     // Warn when a large result would be printed to the console without --output.
     constexpr uint64_t kLargeOutputThreshold = 1'000'000;
@@ -278,9 +305,95 @@ int Application::run_compute(const ComputeOptions& options, Language lang) {
         }
     }
 
-    if (!options.quiet) {
-        print_to_console(console_output, options.show_stats, lang);
+    auto output_progress = [&progress_callback](double local) {
+        if (progress_callback) {
+            local = std::min(local, 0.999);
+            progress_callback(0.20 + 0.80 * local);
+        }
+    };
+
+    if (!options.quiet && options.output_path.has_value()) {
+        OstreamSink console_sink(std::cout);
+        FileSink file_sink(*options.output_path);
+        if (!file_sink.good()) {
+            print_error(to_string(file_sink.error(), lang), std::cerr);
+            return 1;
+        }
+        struct MultiSink {
+            OstreamSink* console;
+            FileSink* file;
+            bool ok = true;
+            void write(std::string_view data) {
+                if (!ok) return;
+                console->write(data);
+                if (!console->good()) ok = false;
+                file->write(data);
+                if (!file->good()) ok = false;
+            }
+            [[nodiscard]] bool good() const { return ok; }
+        } multi{&console_sink, &file_sink};
+        auto res = stream_pi(result->scaled_pi, output_digits, result->guard_digits,
+                             multi, output_progress);
+        if (!res) {
+            print_error(to_string(res.error(), lang), std::cerr);
+            return 1;
+        }
+        std::cout << '\n';
+        if (progress_callback) {
+            progress_callback(1.0);
+            std::cerr << '\n';
+        }
+        if (options.show_stats) {
+            std::cout << format_stats(stats, lang);
+        }
+        std::cout << '\n';
+    } else if (!options.quiet) {
+        OstreamSink console_sink(std::cout);
+        auto res = stream_pi(result->scaled_pi, output_digits, result->guard_digits,
+                             console_sink, output_progress);
+        if (!res) {
+            print_error(to_string(res.error(), lang), std::cerr);
+            return 1;
+        }
+        std::cout << '\n';
+        if (progress_callback) {
+            progress_callback(1.0);
+            std::cerr << '\n';
+        }
+        if (options.show_stats) {
+            std::cout << format_stats(stats, lang);
+        }
+        std::cout << '\n';
+    } else if (options.output_path.has_value()) {
+        FileSink file_sink(*options.output_path);
+        if (!file_sink.good()) {
+            print_error(to_string(file_sink.error(), lang), std::cerr);
+            return 1;
+        }
+        auto res = stream_pi(result->scaled_pi, output_digits, result->guard_digits,
+                             file_sink, output_progress);
+        if (!res) {
+            print_error(to_string(res.error(), lang), std::cerr);
+            return 1;
+        }
+        if (progress_callback) {
+            progress_callback(1.0);
+            std::cerr << '\n';
+        }
+        if (options.show_stats) {
+            if (lang == Language::Chinese) {
+                std::cout << "已计算 " << output_digits << " 位，耗时 "
+                          << result->elapsed_ms << " 毫秒。\n";
+            } else {
+                std::cout << "Computed " << output_digits << " digits in "
+                          << result->elapsed_ms << " ms.\n";
+            }
+        }
     } else if (options.show_stats) {
+        if (progress_callback) {
+            progress_callback(1.0);
+            std::cerr << '\n';
+        }
         if (lang == Language::Chinese) {
             std::cout << "已计算 " << output_digits << " 位，耗时 "
                       << result->elapsed_ms << " 毫秒。\n";
@@ -288,14 +401,9 @@ int Application::run_compute(const ComputeOptions& options, Language lang) {
             std::cout << "Computed " << output_digits << " digits in "
                       << result->elapsed_ms << " ms.\n";
         }
-    }
-
-    if (options.output_path.has_value()) {
-        auto write_res = write_text_file(*options.output_path, formatted, true);
-        if (!write_res) {
-            print_error(to_string(write_res.error(), lang), std::cerr);
-            return 1;
-        }
+    } else if (progress_callback) {
+        progress_callback(1.0);
+        std::cerr << '\n';
     }
 
     return 0;
